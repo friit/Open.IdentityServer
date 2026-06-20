@@ -204,6 +204,7 @@ internal static class Constants
         public const string EndSession = "Endsession";
         public const string CheckSession = "Checksession";
         public const string UserInfo = "Userinfo";
+        public const string Register = "Register";
     }
 
     public static class ProtocolRoutePaths
@@ -228,6 +229,9 @@ internal static class Constants
         public const string MtlsRevocation          = MtlsPathPrefix + "/revocation";
         public const string MtlsIntrospection       = MtlsPathPrefix + "/introspect";
         public const string MtlsDeviceAuthorization = MtlsPathPrefix + "/deviceauthorization";
+            
+        public const string Register                = ConnectPathPrefix + "/register";
+
 
         public static readonly string[] CorsPaths =
         {

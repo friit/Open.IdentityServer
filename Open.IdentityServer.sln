@@ -72,6 +72,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7A351D3D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.Storage.UnitTests", "src\Storage\tests\Open.IdentityServer.Storage.UnitTests\Open.IdentityServer.Storage.UnitTests.csproj", "{FF1944C8-2516-4197-9B63-8BB3581882B3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DynamicClientRegistration", "DynamicClientRegistration", "{3A83864B-51C3-4998-8D7B-375AC50BB73D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FF1250F3-721B-417C-9F1F-929959D07697}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6EE36485-096C-42D8-9072-390999E378AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration", "src\DynamicClientRegistration\src\Open.IdentityServer.DynamicClientRegistration\Open.IdentityServer.DynamicClientRegistration.csproj", "{4132016F-390F-4339-8490-C77719DDCAC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "src\DynamicClientRegistration\src\Host\Host.csproj", "{5E6C1F51-D870-4894-8681-3C8481CF6F4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration.UnitTests", "src\DynamicClientRegistration\tests\Open.IdentityServer.DynamicClientRegistration.UnitTests\Open.IdentityServer.DynamicClientRegistration.UnitTests.csproj", "{9928D97C-A09E-4B88-A629-A19233F852C3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -109,6 +121,11 @@ Global
 		{C459AC33-FD11-402E-8058-F76DD940190D} = {78510D3C-6BE1-4017-8AD4-CC905D58D788}
 		{7A351D3D-4AC7-4662-8BF3-8F42D6097F87} = {7C740022-8283-4021-8E72-3F2847949309}
 		{FF1944C8-2516-4197-9B63-8BB3581882B3} = {7A351D3D-4AC7-4662-8BF3-8F42D6097F87}
+		{FF1250F3-721B-417C-9F1F-929959D07697} = {3A83864B-51C3-4998-8D7B-375AC50BB73D}
+		{6EE36485-096C-42D8-9072-390999E378AE} = {3A83864B-51C3-4998-8D7B-375AC50BB73D}
+		{4132016F-390F-4339-8490-C77719DDCAC3} = {FF1250F3-721B-417C-9F1F-929959D07697}
+		{5E6C1F51-D870-4894-8681-3C8481CF6F4C} = {FF1250F3-721B-417C-9F1F-929959D07697}
+		{9928D97C-A09E-4B88-A629-A19233F852C3} = {6EE36485-096C-42D8-9072-390999E378AE}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{A2D626B8-1532-4E35-B9F2-4246C838D192}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -183,5 +200,17 @@ Global
 		{FF1944C8-2516-4197-9B63-8BB3581882B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF1944C8-2516-4197-9B63-8BB3581882B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FF1944C8-2516-4197-9B63-8BB3581882B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4132016F-390F-4339-8490-C77719DDCAC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4132016F-390F-4339-8490-C77719DDCAC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4132016F-390F-4339-8490-C77719DDCAC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4132016F-390F-4339-8490-C77719DDCAC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E6C1F51-D870-4894-8681-3C8481CF6F4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E6C1F51-D870-4894-8681-3C8481CF6F4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E6C1F51-D870-4894-8681-3C8481CF6F4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E6C1F51-D870-4894-8681-3C8481CF6F4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9928D97C-A09E-4B88-A629-A19233F852C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9928D97C-A09E-4B88-A629-A19233F852C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9928D97C-A09E-4B88-A629-A19233F852C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9928D97C-A09E-4B88-A629-A19233F852C3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
