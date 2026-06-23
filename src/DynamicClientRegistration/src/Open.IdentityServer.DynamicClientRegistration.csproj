@@ -16,5 +16,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Open.IdentityServer"/>    </ItemGroup>
+        <PackageReference Include="Open.IdentityServer"/>   
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" Visible="false" PackagePath=""/>
+        <None Include="../../../OpenIdentityServerIcon.png" Pack="true" Visible="false" PackagePath=""/>
+    </ItemGroup>
 </Project>

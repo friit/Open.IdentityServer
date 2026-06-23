@@ -1,26 +1,18 @@
 ﻿using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Open.IdentityServer.DynamicClientRegistration.Configuration;
 using Open.IdentityServer.Endpoints.Results;
 using Open.IdentityServer.Hosting;
-using Open.IdentityServer.Services;
 
 namespace Open.IdentityServer.DynamicClientRegistration.Endpoints;
 
 public class RegisterEndpoint : IEndpointHandler
 {
-    private readonly IEventService _events;
-    private readonly DynamicClientRegistrationOptions _options;
     public ILogger<RegisterEndpoint> Logger { get; }
 
     public RegisterEndpoint(
-        IEventService events,
-        ILogger<RegisterEndpoint> logger,
-        DynamicClientRegistrationOptions options)
+        ILogger<RegisterEndpoint> logger)
     {
-        _events = events;
-        _options = options;
         Logger = logger;
     }
     public async Task<IEndpointResult> ProcessAsync(HttpContext context)
@@ -58,7 +50,7 @@ public class RegisterEndpoint : IEndpointHandler
         throw new NotImplementedException();
     }
     
-    protected async Task<IEndpointResult> CreateErrorResultAsync(
+    /*protected async Task<IEndpointResult> CreateErrorResultAsync(
         string logMessage,
         ValidatedAuthorizeRequest request = null,
         string error = OidcConstants.AuthorizeErrors.ServerError,
@@ -86,5 +78,5 @@ public class RegisterEndpoint : IEndpointHandler
             ErrorDescription = errorDescription,
             SessionState = request?.GenerateSessionStateValue()
         });
-    }
+    }*/
 }

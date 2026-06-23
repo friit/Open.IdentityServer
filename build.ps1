@@ -23,3 +23,7 @@ popd
 pushd ./src/AspNetIdentity
 Invoke-Expression "./build.ps1 $args"
 popd
+
+pushd ./src/DynamicClientRegistration
+Invoke-Expression "./build.ps1 $args"
+popd
