@@ -78,7 +78,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FF1250F3-721
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6EE36485-096C-42D8-9072-390999E378AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "src\DynamicClientRegistration\Host\Host.csproj", "{5E6C1F51-D870-4894-8681-3C8481CF6F4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "src\DynamicClientRegistration\host\Host.csproj", "{5E6C1F51-D870-4894-8681-3C8481CF6F4C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration.UnitTests", "src\DynamicClientRegistration\tests\Open.IdentityServer.DynamicClientRegistration.UnitTests\Open.IdentityServer.DynamicClientRegistration.UnitTests.csproj", "{9928D97C-A09E-4B88-A629-A19233F852C3}"
 EndProject
