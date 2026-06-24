@@ -11,7 +11,7 @@ public static class IEndpointRouteBuilderExtensions
     {
         RouteHandlerBuilder registerBuilder = builder.MapPost(
             route, 
-            (RegisterEndpoint endpoint, HttpContext context) => endpoint.ProcessAsync(context)
+            (RegisterEndpoint endpoint, HttpContext context) => endpoint.ProcessRegistrationAsync(context)
             )
             .WithName("DynamicClientRegistration")
             .WithDisplayName("Dynamic Client Registration");

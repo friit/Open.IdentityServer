@@ -1,82 +1,142 @@
 ﻿using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Open.IdentityServer.Endpoints.Results;
-using Open.IdentityServer.Hosting;
+using Open.IdentityServer.DynamicClientRegistration.Exceptions;
+using Open.IdentityServer.DynamicClientRegistration.Generators;
+using Open.IdentityServer.DynamicClientRegistration.Models;
+using Open.IdentityServer.DynamicClientRegistration.Parser;
+using Open.IdentityServer.DynamicClientRegistration.Services;
+using Open.IdentityServer.DynamicClientRegistration.Validation;
 
 namespace Open.IdentityServer.DynamicClientRegistration.Endpoints;
 
-public class RegisterEndpoint : IEndpointHandler
+public class RegisterEndpoint
 {
-    public ILogger<RegisterEndpoint> Logger { get; }
+    private readonly IDynamicClientRegistrationRequestParser _registrationRequestParser;
+    private readonly IDynamicClientRegistrationValidator _validator;
+    private readonly IDynamicClientRegistrationService _service;
+    private readonly IDynamicClientRegistrationResponseGenerator _responseGenerator;
+    private readonly ILogger<RegisterEndpoint> _logger;
 
     public RegisterEndpoint(
+        IDynamicClientRegistrationRequestParser registrationRequestParser,
+        IDynamicClientRegistrationValidator validator,
+        IDynamicClientRegistrationService service,
+        IDynamicClientRegistrationResponseGenerator responseGenerator,
         ILogger<RegisterEndpoint> logger)
     {
-        Logger = logger;
+        _registrationRequestParser = registrationRequestParser;
+        _service = service;
+        _responseGenerator = responseGenerator;
+        _validator = validator;
+        _logger = logger;
     }
-    public async Task<IEndpointResult> ProcessAsync(HttpContext context)
+    public async Task ProcessRegistrationAsync(HttpContext context)
     {
-        Logger.LogDebug("Start register request");
-        
-        IEndpointResult result = null;
-        
-        if (HttpMethods.IsPost(context.Request.Method))
-        { 
-            if (!context.Request.HasJsonContentType())
+        _logger.LogDebug("Start Dynamic Client Registration request");
+
+        if (!HttpMethods.IsPost(context.Request.Method))
+        {
+            _logger.LogWarning("Invalid HTTP method for register endpoint: {method}", context.Request.Method);
+
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            context.Response.Headers.Allow = HttpMethods.Post;
+            return;
+        }
+
+        try
+        {
+            // Parse request
+            var request = await _registrationRequestParser.ParseAsync(
+                context.Request.Body,
+                context.Request.ContentType,
+                context.RequestAborted
+            );
+
+            // Validate request
+            var validationResult = await _validator.ValidateAsync(request, context.RequestAborted);
+            if (!validationResult.IsValid())
             {
-                return new StatusCodeResult(HttpStatusCode.UnsupportedMediaType);
+                _logger.LogWarning("Invalid register request");
+
+                await WriteErrorResultAsync(
+                    context,
+                    validationResult.Error!,
+                    validationResult.ErrorDescription
+                );
+
+                return;
             }
-            
-            result = await ProcessRegisterPostRequestAsync(context);
+
+            // Register client
+            var result = await _service.RegisterAsync(request, context.RequestAborted);
+
+            // Generate response DTO
+            var response = await _responseGenerator.GenerateAsync(result, context.RequestAborted);
+
+            // Write response
+            await WriteClientInfoResultAsync(context, response);
+
         }
-        else
+        catch (DynamicClientManagementException dynamicClientManagementException)
         {
-            return new StatusCodeResult(HttpStatusCode.MethodNotAllowed);
+            _logger.LogWarning("Register request failed: {error}", dynamicClientManagementException.Error);
+
+            await WriteErrorResultAsync(
+                context,
+                dynamicClientManagementException.Error,
+                dynamicClientManagementException.ErrorDescription,
+                dynamicClientManagementException.StatusCode
+            );
+
+            return;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected exception processing dynamic client registration request");
+
+            await WriteErrorResultAsync(
+                context,
+                "server_error",
+                "An error occurred processing the request.",
+                HttpStatusCode.InternalServerError
+            );
+
+            return;
+        }
+        finally
+        {
+            _logger.LogTrace("End registration request");
+        }
+    }
+    
+    protected async Task WriteClientInfoResultAsync(HttpContext context, RegisterResponse registerResponse)
+    {
+        context.Response.StatusCode = (int)HttpStatusCode.Created;
         
-        Logger.LogTrace("End register request. result type: {0}", result?.GetType().ToString() ?? "-none-");
-
-        return result;
-    }
-
-    private Task<IEndpointResult> ProcessRegisterGetRequestAsync(HttpContext context)
-    {
-        throw new NotImplementedException();
+        context.Response.ContentType = "application/json";
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+        
+        await context.Response.WriteAsJsonAsync(registerResponse);
     }
     
-    private Task<IEndpointResult> ProcessRegisterPostRequestAsync(HttpContext context)
+    protected async Task WriteErrorResultAsync(
+        HttpContext context, 
+        string error, 
+        string? errorDescription,
+        HttpStatusCode statusCode = HttpStatusCode.BadRequest)
     {
-        throw new NotImplementedException();
-    }
-    
-    /*protected async Task<IEndpointResult> CreateErrorResultAsync(
-        string logMessage,
-        ValidatedAuthorizeRequest request = null,
-        string error = OidcConstants.AuthorizeErrors.ServerError,
-        string errorDescription = null,
-        bool logError = true)
-    {
-        if (logError)
+        context.Response.StatusCode = (int)statusCode;
+        
+        context.Response.ContentType = "application/json";
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+        
+        await context.Response.WriteAsJsonAsync(new
         {
-            Logger.LogError(logMessage);
-        }
-
-        if (request != null)
-        {
-            var details = new AuthorizeRequestValidationLog(request, _options.Logging.AuthorizeRequestSensitiveValuesFilter);
-            Logger.LogInformation("{@validationDetails}", details);
-        }
-
-        // TODO: should we raise a token failure event for all errors to the authorize endpoint?
-        await RaiseFailureEventAsync(request, error, errorDescription);
-
-        return new AuthorizeResult(new AuthorizeResponse
-        {
-            Request = request,
-            Error = error,
-            ErrorDescription = errorDescription,
-            SessionState = request?.GenerateSessionStateValue()
+            error,
+            error_description = errorDescription
         });
-    }*/
+    }
 }
