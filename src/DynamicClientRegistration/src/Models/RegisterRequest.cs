@@ -355,6 +355,36 @@ public class RegisterRequest
     [JsonPropertyName("request_uris")]
     public string[]? RequestUris { get; init; }
 
+    /// <summary>
+    /// OPTIONAL. Front-channel logout URI for the client.
+    /// </summary>
+    /// <remarks>
+    /// When supplied, the OpenID Provider can notify the client of logout by loading this URI in the user agent.
+    /// </remarks>
+    [JsonPropertyName("frontchannel_logout_uri")]
+    public string? FrontChannelLogoutUri { get; init; }
+
+    /// <summary>
+    /// OPTIONAL. Indicates whether the OP should include the session ID when invoking front-channel logout.
+    /// </summary>
+    [JsonPropertyName("frontchannel_logout_session_required")]
+    public bool? FrontChannelLogoutSessionRequired { get; init; }
+
+    /// <summary>
+    /// OPTIONAL. Back-channel logout URI for the client.
+    /// </summary>
+    /// <remarks>
+    /// When supplied, the OpenID Provider can notify the client of logout by sending a logout token to this URI.
+    /// </remarks>
+    [JsonPropertyName("backchannel_logout_uri")]
+    public string? BackChannelLogoutUri { get; init; }
+
+    /// <summary>
+    /// OPTIONAL. Indicates whether the OP should include the session ID claim in back-channel logout tokens.
+    /// </summary>
+    [JsonPropertyName("backchannel_logout_session_required")]
+    public bool? BackChannelLogoutSessionRequired { get; init; }
+
     [JsonPropertyName("post_logout_redirect_uris")]
     public string[]? PostLogoutRedirectUris { get; init; }
 

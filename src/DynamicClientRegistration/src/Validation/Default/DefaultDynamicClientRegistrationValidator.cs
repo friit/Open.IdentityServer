@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientRegistration.Configuration;
+using Open.IdentityServer.DynamicClientRegistration.Models;
 using Open.IdentityServer.DynamicClientRegistration.Models.Results;
 using Open.IdentityServer.DynamicClientRegistration.Parser.Models;
 using Open.IdentityServer.DynamicClientRegistration.Validation.Models;
@@ -40,7 +41,18 @@ public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrat
                 "RedirectUris must be provided."
             );
         }
-
+        
+        //TODO: Validate Response Type and Grant Type if not null
+        //TODO: Reject jwks_uri as it's not a supported feature
+        //TODO: Reject subject type pairwise and SectorIdentifierUri as it's not a supported feature'
+        //TODO: reject request uris as it's not a supported feature
+        //TODO: reject TokenEndpointAuthSigningAlgorithm as it's not a supported feature
+        //TODO: reject RequestObjectEncryption and RequestObjectEncryptionAlgorithm
+        //todo: reject RequestObjectSigningAlgorithm
+        //todo: reject UserInfoEncryptedResponseEncryption and UserInfoEncryptedResponseAlgorithm
+        //todo reject UserInfoSignedResponseAlgorithm and IdTokenEncryptedResponseEncryption
+        //todo reject IdTokenEncryptedResponseAlgorithm IdTokenSignedResponseAlgorithm
+        
         foreach (var redirectUri in parseResult.Request.RedirectUris)
         {
             if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out Uri? result))
@@ -62,6 +74,29 @@ public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrat
                     $"RedirectUri '{redirectUri}' must not use HTTP."
                 );
             }
+        }
+
+        var frontChannelLogoutValidationResult = ValidateLogoutUri(
+            parseResult.Request,
+            parseResult.Request.FrontChannelLogoutUri,
+            parseResult.Request.FrontChannelLogoutSessionRequired.HasValue,
+            "FrontChannelLogoutUri",
+            "frontchannel_logout_session_required",
+            allowFragment: false);
+        if (frontChannelLogoutValidationResult != null)
+        {
+            return frontChannelLogoutValidationResult;
+        }
+
+        var backChannelLogoutValidationResult = ValidateLogoutUri(
+            parseResult.Request,
+            parseResult.Request.BackChannelLogoutUri,
+            parseResult.Request.BackChannelLogoutSessionRequired.HasValue,
+            "BackChannelLogoutUri",
+            "backchannel_logout_session_required");
+        if (backChannelLogoutValidationResult != null)
+        {
+            return backChannelLogoutValidationResult;
         }
 
         if (_options.Value.RequireValidSoftwareStatement)
@@ -93,5 +128,61 @@ public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrat
         }
         
         return new RegistrationRequestValidationResult(parseResult.Request);
+    }
+
+    private RegistrationRequestValidationResult? ValidateLogoutUri(
+        RegisterRequest request,
+        string? logoutUri,
+        bool hasDependentFlag,
+        string propertyName,
+        string dependentFlagName,
+        bool allowFragment = true)
+    {
+        if (string.IsNullOrWhiteSpace(logoutUri))
+        {
+            if (!hasDependentFlag)
+            {
+                return null;
+            }
+
+            var errorDescription = $"{dependentFlagName} requires {propertyName} to be provided.";
+            _logger.LogError(errorDescription);
+            return new RegistrationRequestValidationResult(
+                request,
+                Constants.RegisterErrors.InvalidClientMetadata,
+                errorDescription);
+        }
+
+        if (!Uri.TryCreate(logoutUri, UriKind.Absolute, out var parsedLogoutUri))
+        {
+            var errorDescription = $"{propertyName} '{logoutUri}' must be an absolute URI.";
+            _logger.LogError(errorDescription);
+            return new RegistrationRequestValidationResult(
+                request,
+                Constants.RegisterErrors.InvalidClientMetadata,
+                errorDescription);
+        }
+
+        if (parsedLogoutUri.Scheme != Uri.UriSchemeHttps)
+        {
+            var errorDescription = $"{propertyName} '{logoutUri}' must use HTTPS.";
+            _logger.LogError(errorDescription);
+            return new RegistrationRequestValidationResult(
+                request,
+                Constants.RegisterErrors.InvalidClientMetadata,
+                errorDescription);
+        }
+
+        if (!allowFragment && !string.IsNullOrEmpty(parsedLogoutUri.Fragment))
+        {
+            var errorDescription = $"{propertyName} '{logoutUri}' must not contain a fragment.";
+            _logger.LogError(errorDescription);
+            return new RegistrationRequestValidationResult(
+                request,
+                Constants.RegisterErrors.InvalidClientMetadata,
+                errorDescription);
+        }
+
+        return null;
     }
 }
