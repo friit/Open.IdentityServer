@@ -113,7 +113,7 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         var errorResponseJson = responseDocument.RootElement;
         
         errorResponseJson.GetProperty("error").GetString().Should().Be("invalid_redirect_uri");
-        errorResponseJson.GetProperty("error_description").GetString().Should().Be("One or more redirect_uri values are invalid");
+        errorResponseJson.GetProperty("error_description").GetString().Should().Be("RedirectUri 'invalid_redirect_uri' must be an absolute URI.");
     }
     
     [Fact]
@@ -139,7 +139,7 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         var errorResponseJson = responseDocument.RootElement;
         
         errorResponseJson.GetProperty("error").GetString().Should().Be("invalid_client_metadata");
-        errorResponseJson.GetProperty("error_description").GetString().Should().Be("One or more client values are invalid");
+        errorResponseJson.GetProperty("error_description").GetString().Should().Be("RedirectUris must be provided.");
     }
 
     private static void ShouldContainRequestedMetadata(JsonElement responseJson, RegisterRequest registerRequest)

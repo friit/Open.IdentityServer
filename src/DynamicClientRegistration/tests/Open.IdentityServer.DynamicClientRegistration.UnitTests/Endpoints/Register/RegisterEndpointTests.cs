@@ -16,8 +16,10 @@ using Open.IdentityServer.DynamicClientRegistration.Generators;
 using Open.IdentityServer.DynamicClientRegistration.Models;
 using Open.IdentityServer.DynamicClientRegistration.Models.Results;
 using Open.IdentityServer.DynamicClientRegistration.Parser;
+using Open.IdentityServer.DynamicClientRegistration.Parser.Models;
 using Open.IdentityServer.DynamicClientRegistration.Services;
 using Open.IdentityServer.DynamicClientRegistration.Validation;
+using Open.IdentityServer.DynamicClientRegistration.Validation.Models;
 using Open.IdentityServer.Models;
 using Xunit;
 
@@ -100,16 +102,17 @@ public class RegisterEndpointTests
     public async Task process_when_validation_throws_dcr_exception_should_return_400_with_error()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         var exception = new DynamicClientTestException();
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
             .ThrowsAsync(exception);
         
         await _subject.ProcessRegistrationAsync(_context);
@@ -121,16 +124,17 @@ public class RegisterEndpointTests
     public async Task process_when_validation_fails_should_return_400_with_validation_errors()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
-        var validationResult = DynamicClientRegistrationValidationResult.CreateFailure("test_error", "test_description");
+        var validationResult = new RegistrationRequestValidationResult(registerRequest, "test_error", "test_description");
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(validationResult);
 
         await _subject.ProcessRegistrationAsync(_context);
@@ -160,16 +164,17 @@ public class RegisterEndpointTests
     public async Task process_when_register_throws_exception_should_return_500()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
-            .ReturnsAsync(DynamicClientRegistrationValidationResult.CreateSuccess(registerRequest));
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
         
         Mock.Get(_service)
             .Setup(x => x.RegisterAsync(registerRequest, _context.RequestAborted))
@@ -184,16 +189,17 @@ public class RegisterEndpointTests
     public async Task process_when_register_throws_dcr_exception_should_return_400_with_error()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
-            .ReturnsAsync(DynamicClientRegistrationValidationResult.CreateSuccess(registerRequest));
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
         
         var exception = new DynamicClientTestException();
         Mock.Get(_service)
@@ -209,16 +215,17 @@ public class RegisterEndpointTests
     public async Task process_when_response_generator_throws_exception_should_return_500()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
-            .ReturnsAsync(DynamicClientRegistrationValidationResult.CreateSuccess(registerRequest));
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
         var result = new DynamicClientRegistrationResult
         {
@@ -246,16 +253,17 @@ public class RegisterEndpointTests
     public async Task process_when_response_generator_throws_dcr_exception_should_return_400_with_error()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
-            .ReturnsAsync(DynamicClientRegistrationValidationResult.CreateSuccess(registerRequest));
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
         var result = new DynamicClientRegistrationResult
         {
@@ -284,16 +292,17 @@ public class RegisterEndpointTests
     public async Task process_when_register_succeeds_should_return_201_with_client_metadata()
     {
         var registerRequest = new RegisterRequest();
+        var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
             .Setup(x => x.ParseAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
-            ).ReturnsAsync(registerRequest);
+            ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(registerRequest, _context.RequestAborted))
-            .ReturnsAsync(DynamicClientRegistrationValidationResult.CreateSuccess(registerRequest));
+            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
         var result = new DynamicClientRegistrationResult()
         {
@@ -411,6 +420,14 @@ public class RegisterEndpointTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         return document.RootElement.Clone();
+    }
+
+    private static RegistrationRequestParseResult CreateParseResult(RegisterRequest request)
+    {
+        return new RegistrationRequestParseResult
+        {
+            Request = request
+        };
     }
 
     private class DynamicClientTestException : DynamicClientManagementException

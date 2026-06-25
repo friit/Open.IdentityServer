@@ -47,15 +47,15 @@ public class RegisterEndpoint
         try
         {
             // Parse request
-            var request = await _registrationRequestParser.ParseAsync(
+            var parseResult = await _registrationRequestParser.ParseAsync(
                 context.Request.Body,
                 context.Request.ContentType,
                 context.RequestAborted
             );
 
             // Validate request
-            var validationResult = await _validator.ValidateAsync(request, context.RequestAborted);
-            if (!validationResult.IsValid())
+            var validationResult = await _validator.ValidateAsync(parseResult, context.RequestAborted);
+            if (validationResult.IsError)
             {
                 _logger.LogWarning("Invalid register request");
 
@@ -69,7 +69,7 @@ public class RegisterEndpoint
             }
 
             // Register client
-            var result = await _service.RegisterAsync(request, context.RequestAborted);
+            var result = await _service.RegisterAsync(parseResult.Request, context.RequestAborted);
 
             // Generate response DTO
             var response = await _responseGenerator.GenerateAsync(result, context.RequestAborted);
@@ -97,7 +97,7 @@ public class RegisterEndpoint
 
             await WriteErrorResultAsync(
                 context,
-                "server_error",
+                Constants.RegisterErrors.ServerError,
                 "An error occurred processing the request.",
                 HttpStatusCode.InternalServerError
             );
