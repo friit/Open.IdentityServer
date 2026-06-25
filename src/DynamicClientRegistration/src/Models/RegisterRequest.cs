@@ -154,6 +154,12 @@ public class RegisterRequest
     [JsonPropertyName("software_version")]
     public string? SoftwareVersion { get; init; }
     
+    /// <summary>
+    /// Software Statement for the software containing Client Metadata. Values in the software statement will override Client Metadata values.
+    /// Optionally signed.
+    /// </summary>
+    [JsonPropertyName("software_statement")]
+    public string? SoftwareStatement { get; init; }
 
     // OpenID Connect Dynamic Client Registration
 
