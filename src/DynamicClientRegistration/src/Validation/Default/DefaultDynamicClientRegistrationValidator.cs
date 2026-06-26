@@ -10,6 +10,36 @@ namespace Open.IdentityServer.DynamicClientRegistration.Validation.Default;
 
 public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrationValidator
 {
+ 
+    private delegate string? UnsupportedMetadataDelegate(RegisterRequest request);
+
+    private static readonly UnsupportedMetadataDelegate[] _unsupportedMetadataDelegates =
+    [
+        r => r.JsonWebKeySetUri is not null ? "jwks_uri" : null,
+        r => r.SubjectType is not null ? "subject_type" : null,
+        r => r.SectorIdentifierUri is not null ? "sector_identifier_uri" : null,
+        r => r.RequestUris is not null ? "request_uris" : null,
+        r => r.TokenEndpointAuthSigningAlgorithm is not null ? "token_endpoint_auth_signing_alg" : null, 
+        r => r.RequestObjectEncryption is not null ? "request_object_encryption" : null,
+        r => r.RequestObjectEncryptionAlgorithm is not null ? "request_object_encryption_alg" : null,
+        r => r.RequestObjectSigningAlgorithm is not null ? "request_object_signing_alg" : null,
+        r => r.UserInfoEncryptedResponseEncryption is not null ? "userinfo_encrypted_response_enc" : null,
+        r => r.UserInfoEncryptedResponseAlgorithm is not null ? "userinfo_encrypted_response_alg" : null,
+        r => r.UserInfoSignedResponseAlgorithm is not null ? "userinfo_signed_response_alg" : null,
+        r => r.IdTokenEncryptedResponseEncryption is not null ? "id_token_encrypted_response_enc" : null,
+        r => r.IdTokenEncryptedResponseAlgorithm is not null ? "id_token_encrypted_response_alg" : null,
+        r => r.IdTokenSignedResponseAlgorithm is not null ? "id_token_signed_response_alg" : null,
+    ];
+    
+    private static IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request)
+    {
+        return _unsupportedMetadataDelegates
+            .Select(d => d(request))
+            .Where(m => m is not null)
+            .Select(m => m!)
+            .ToList();
+    }
+    
     private readonly IOptions<DynamicClientRegistrationOptions> _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
     private readonly ILogger<IDynamicClientRegistrationValidator> _logger;
@@ -32,6 +62,18 @@ public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrat
         
         cancellationToken.ThrowIfCancellationRequested();
 
+        var unsupportedMetadata = GetUnsupportedMetadata(parseResult.Request);
+        if (unsupportedMetadata.Any())
+        {
+            var unsupportedMetadataString = string.Join(",\n", unsupportedMetadata);
+            _logger.LogError("Unsupported metadata fields: {unsupportedMetadata}", unsupportedMetadataString);
+            return new RegistrationRequestValidationResult(
+                parseResult.Request,
+                Constants.RegisterErrors.InvalidClientMetadata,
+                $"Unsupported metadata fields: {unsupportedMetadataString}"
+            );
+        }
+        
         if (parseResult.Request.RedirectUris == null || !parseResult.Request.RedirectUris.Any())
         {
             _logger.LogError("RedirectUris must be provided.");
@@ -42,16 +84,6 @@ public class DefaultDynamicClientRegistrationValidator : IDynamicClientRegistrat
             );
         }
         
-        //TODO: Validate Response Type and Grant Type if not null
-        //TODO: Reject jwks_uri as it's not a supported feature
-        //TODO: Reject subject type pairwise and SectorIdentifierUri as it's not a supported feature'
-        //TODO: reject request uris as it's not a supported feature
-        //TODO: reject TokenEndpointAuthSigningAlgorithm as it's not a supported feature
-        //TODO: reject RequestObjectEncryption and RequestObjectEncryptionAlgorithm
-        //todo: reject RequestObjectSigningAlgorithm
-        //todo: reject UserInfoEncryptedResponseEncryption and UserInfoEncryptedResponseAlgorithm
-        //todo reject UserInfoSignedResponseAlgorithm and IdTokenEncryptedResponseEncryption
-        //todo reject IdTokenEncryptedResponseAlgorithm IdTokenSignedResponseAlgorithm
         
         foreach (var redirectUri in parseResult.Request.RedirectUris)
         {
