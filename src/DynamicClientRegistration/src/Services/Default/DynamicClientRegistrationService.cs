@@ -85,6 +85,8 @@ public class DynamicClientRegistrationService : IDynamicClientRegistrationServic
             client.Properties["software_version"] = request.SoftwareVersion;
         }
 
+        //TODO WRITE A CLIENT STORE
+
         _logger.LogDebug(
             "Registered dynamic client {clientId} using token endpoint auth method {tokenEndpointAuthMethod}.",
             generatedClientId,
