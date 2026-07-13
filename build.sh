@@ -26,6 +26,6 @@ pushd ./src/AspNetIdentity
 ./build.sh "$@"
 popd
 
-pushd ./src/DynamicClientRegistration
+pushd ./src/DynamicClientManagement
 ./build.sh "$@"
 popd

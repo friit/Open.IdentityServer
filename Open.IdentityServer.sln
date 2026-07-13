@@ -72,19 +72,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7A351D3D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.Storage.UnitTests", "src\Storage\tests\Open.IdentityServer.Storage.UnitTests\Open.IdentityServer.Storage.UnitTests.csproj", "{FF1944C8-2516-4197-9B63-8BB3581882B3}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DynamicClientRegistration", "DynamicClientRegistration", "{3A83864B-51C3-4998-8D7B-375AC50BB73D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DynamicClientManagement", "DynamicClientManagement", "{3A83864B-51C3-4998-8D7B-375AC50BB73D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FF1250F3-721B-417C-9F1F-929959D07697}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6EE36485-096C-42D8-9072-390999E378AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "src\DynamicClientRegistration\host\Host.csproj", "{5E6C1F51-D870-4894-8681-3C8481CF6F4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.Host", "src\DynamicClientManagement\host\Open.IdentityServer.DynamicClientManagement.Host.csproj", "{5E6C1F51-D870-4894-8681-3C8481CF6F4C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration.UnitTests", "src\DynamicClientRegistration\tests\Open.IdentityServer.DynamicClientRegistration.UnitTests\Open.IdentityServer.DynamicClientRegistration.UnitTests.csproj", "{9928D97C-A09E-4B88-A629-A19233F852C3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.UnitTests", "src\DynamicClientManagement\tests\Open.IdentityServer.DynamicClientManagement.UnitTests\Open.IdentityServer.DynamicClientManagement.UnitTests.csproj", "{9928D97C-A09E-4B88-A629-A19233F852C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration", "src\DynamicClientRegistration\src\Open.IdentityServer.DynamicClientRegistration.csproj", "{D45C6220-1D31-4DC4-AC86-B6AEA6D7706C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement", "src\DynamicClientManagement\src\Open.IdentityServer.DynamicClientManagement.csproj", "{D45C6220-1D31-4DC4-AC86-B6AEA6D7706C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientRegistration.IntegrationTests", "src\DynamicClientRegistration\tests\Open.IdentityServer.DynamicClientRegistration.IntegrationTests\Open.IdentityServer.DynamicClientRegistration.IntegrationTests.csproj", "{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.IntegrationTests", "src\DynamicClientManagement\tests\Open.IdentityServer.DynamicClientManagement.IntegrationTests\Open.IdentityServer.DynamicClientManagement.IntegrationTests.csproj", "{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
