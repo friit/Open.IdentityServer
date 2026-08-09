@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Open.IdentityServer.EntityFramework.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,4 +54,10 @@ public interface IConfigurationDbContext: IConfigurationCompatibilityDbContext
     /// The identity resources.
     /// </value>
     DbSet<ApiScope> ApiScopes { get; set; }
+    
+    /// <summary>
+    /// Saves the changes.
+    /// </summary>
+    /// <returns>A task that resolves to the number of state entries written to the database.</returns>
+    Task<int> SaveChangesAsync();
 }

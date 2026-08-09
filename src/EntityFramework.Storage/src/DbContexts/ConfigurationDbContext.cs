@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Open.IdentityServer.EntityFramework.Entities;
 using Open.IdentityServer.EntityFramework.Interfaces;
 using Open.IdentityServer.EntityFramework.Options;
@@ -122,4 +123,13 @@ public class ConfigurationDbContext<TContext> : DbContext, IConfigurationDbConte
     /// The identity providers.
     /// </value>
     public DbSet<IdentityServerIdentityProvider> IdentityProviders { get; set; }
+    
+    /// <summary>
+    /// Saves the changes.
+    /// </summary>
+    /// <returns>A task that resolves to the number of state entries written to the database.</returns>
+    public virtual Task<int> SaveChangesAsync()
+    {
+        return base.SaveChangesAsync();
+    }
 }
