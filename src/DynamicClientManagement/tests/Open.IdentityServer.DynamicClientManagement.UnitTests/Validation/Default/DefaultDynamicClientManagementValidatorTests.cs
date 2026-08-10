@@ -1,4 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿// Copyright (c) 2026, Rock Solid Knowledge Ltd
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -7,7 +10,6 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;

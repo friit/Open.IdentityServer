@@ -1,3 +1,6 @@
+// Copyright (c) 2026, Rock Solid Knowledge Ltd
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using System;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,7 +13,6 @@ using Moq;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Services.Default;
-using Open.IdentityServer.Models;
 using Open.IdentityServer.Stores;
 using Xunit;
 
