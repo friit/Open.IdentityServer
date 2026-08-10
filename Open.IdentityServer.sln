@@ -94,6 +94,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{2B113E14
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.EntityFramework", "src\DynamicClientManagement.EntityFramework\src\Open.IdentityServer.DynamicClientManagement.EntityFramework.csproj", "{A607DF92-C875-4E39-8DF9-822B64E61B2E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.EntityFramework.UnitTests", "src\DynamicClientManagement.EntityFramework\test\Open.IdentityServer.DynamicClientManagement.EntityFramework.UnitTests\Open.IdentityServer.DynamicClientManagement.EntityFramework.UnitTests.csproj", "{7B9D491E-80A6-40CA-AA85-82CED3046433}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -192,6 +194,10 @@ Global
 		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B9D491E-80A6-40CA-AA85-82CED3046433}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B9D491E-80A6-40CA-AA85-82CED3046433}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B9D491E-80A6-40CA-AA85-82CED3046433}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B9D491E-80A6-40CA-AA85-82CED3046433}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -237,5 +243,6 @@ Global
 		{EB5FD159-69FC-4077-8902-788409105ECA} = {0B5B50F7-8076-4FBE-BF04-A5AAA51CD070}
 		{2B113E14-9865-4F3E-B617-E51AA86CDE14} = {0B5B50F7-8076-4FBE-BF04-A5AAA51CD070}
 		{A607DF92-C875-4E39-8DF9-822B64E61B2E} = {EB5FD159-69FC-4077-8902-788409105ECA}
+		{7B9D491E-80A6-40CA-AA85-82CED3046433} = {2B113E14-9865-4F3E-B617-E51AA86CDE14}
 	EndGlobalSection
 EndGlobal
