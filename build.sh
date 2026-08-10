@@ -29,3 +29,7 @@ popd
 pushd ./src/DynamicClientManagement
 ./build.sh "$@"
 popd
+
+pushd ./src/DynamicClientManagement.EntityFramework
+./build.sh "$@"
+popd

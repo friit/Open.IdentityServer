@@ -86,6 +86,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.Dynamic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.IntegrationTests", "src\DynamicClientManagement\tests\Open.IdentityServer.DynamicClientManagement.IntegrationTests\Open.IdentityServer.DynamicClientManagement.IntegrationTests.csproj", "{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DynamicClientManagement.EntityFramework", "src\DynamicClientManagement.EntityFramework.csproj", "{0B5B50F7-8076-4FBE-BF04-A5AAA51CD070}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EB5FD159-69FC-4077-8902-788409105ECA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{2B113E14-9865-4F3E-B617-E51AA86CDE14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Open.IdentityServer.DynamicClientManagement.EntityFramework", "src\DynamicClientManagement.EntityFramework\src\Open.IdentityServer.DynamicClientManagement.EntityFramework.csproj", "{A607DF92-C875-4E39-8DF9-822B64E61B2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -180,6 +188,10 @@ Global
 		{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A607DF92-C875-4E39-8DF9-822B64E61B2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -222,5 +234,8 @@ Global
 		{9928D97C-A09E-4B88-A629-A19233F852C3} = {6EE36485-096C-42D8-9072-390999E378AE}
 		{D45C6220-1D31-4DC4-AC86-B6AEA6D7706C} = {FF1250F3-721B-417C-9F1F-929959D07697}
 		{D4E54AE7-C6A4-4B4C-90FA-DE8A5657337A} = {6EE36485-096C-42D8-9072-390999E378AE}
+		{EB5FD159-69FC-4077-8902-788409105ECA} = {0B5B50F7-8076-4FBE-BF04-A5AAA51CD070}
+		{2B113E14-9865-4F3E-B617-E51AA86CDE14} = {0B5B50F7-8076-4FBE-BF04-A5AAA51CD070}
+		{A607DF92-C875-4E39-8DF9-822B64E61B2E} = {EB5FD159-69FC-4077-8902-788409105ECA}
 	EndGlobalSection
 EndGlobal

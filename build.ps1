@@ -27,3 +27,7 @@ popd
 pushd ./src/DynamicClientManagement
 Invoke-Expression "./build.ps1 $args"
 popd
+
+pushd ./src/DynamicClientManagement.EntityFramework
+Invoke-Expression "./build.ps1 $args"
+popd
