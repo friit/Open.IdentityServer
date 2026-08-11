@@ -146,9 +146,7 @@ public class RegisterEndpointTests
         ExpectNoCacheJsonResponse(_context);
 
         var response = await ReadResponseJsonAsync(_context);
-        response.GetProperty("error").GetString().Should().Be(validationResult.Error);
-        response.GetProperty("error_description").GetString().Should().Be(validationResult.ErrorDescription);
-        
+        response.GetProperty("error").GetString().Should().Be(string.Join(",\n ", validationResult.Errors));        
         Mock.Get(_service)
             .Verify(
                 x => x.RegisterAsync(

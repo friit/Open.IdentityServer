@@ -1,6 +1,8 @@
 ﻿// Copyright (c) 2026, Rock Solid Knowledge Ltd
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +16,7 @@ using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
+using System.Text.Json;
 using Xunit;
 
 namespace Open.IdentityServer.DynamicClientManagement.UnitTests.Validation.Default;
@@ -25,6 +28,7 @@ public class DefaultDynamicClientManagementValidatorTests
     private readonly DynamicClientManagementOptions _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
     private readonly DefaultDynamicClientManagementValidator _subject;
+    
 
     public DefaultDynamicClientManagementValidatorTests()
     {
@@ -40,185 +44,235 @@ public class DefaultDynamicClientManagementValidatorTests
     [Trait("Category", Category)]
     public async Task validate_when_redirect_uris_are_missing_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest());
-
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var registerRequest = CreateRegisterRequest(r => r.RedirectUris = null);
+        
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("RedirectUris must be provided.");
+        result.Errors.Should().Contain("invalid_client_metadata: redirect_uris must be provided.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_redirect_uri_is_not_absolute_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
-        {
-            RedirectUris = ["not-a-uri"]
-        });
+        var registerRequest = CreateRegisterRequest(r => r.RedirectUris = ["not-a-uri"]);
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_redirect_uri");
-        result.ErrorDescription.Should().Be("RedirectUri 'not-a-uri' must be an absolute URI.");
+        result.Errors.Should().Contain("invalid_client_metadata: RedirectUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_redirect_uri_is_not_https_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
-        {
-            RedirectUris = ["http://redirect.test/callback"]
-        });
+        var registerRequest = CreateRegisterRequest(r => r.RedirectUris = ["http://redirect.test/callback"]);
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_redirect_uri");
-        result.ErrorDescription.Should().Be("RedirectUri 'http://redirect.test/callback' must not use HTTP.");
+        result.Errors.Should().Contain("invalid_client_metadata: RedirectUri 'http://redirect.test/callback' must use HTTPS.");
     }
-
-    [Fact]
-    [Trait("Category", Category)]
-    public async Task validate_when_redirect_uris_are_valid_should_return_success()
-    {
-        var request = new RegisterRequest
-        {
-            RedirectUris = ["https://redirect.test/callback"]
-        };
-        var parseResult = CreateParseResult(request);
-
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
-
-        result.IsError.Should().BeFalse();
-        result.Request.Should().BeSameAs(request);
-    }
+    
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_frontchannel_logout_session_required_is_set_without_uri_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            FrontChannelLogoutSessionRequired = true
+            r.FrontChannelLogoutSessionRequired = true;
+            r.FrontChannelLogoutUri = null;
         });
-
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("frontchannel_logout_session_required requires FrontChannelLogoutUri to be provided.");
+        result.Errors.Should().Contain("invalid_client_metadata: frontchannel_logout_session_required requires front_channel_logout_uri to be provided.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_frontchannel_logout_uri_is_not_absolute_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            FrontChannelLogoutUri = "not-a-uri"
+            r.FrontChannelLogoutUri = "not-a-uri";
         });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("FrontChannelLogoutUri 'not-a-uri' must be an absolute URI.");
+        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_frontchannel_logout_uri_is_not_https_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            FrontChannelLogoutUri = "http://logout.test/frontchannel"
+            r.FrontChannelLogoutUri = "http://logout.test/frontchannel";
         });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("FrontChannelLogoutUri 'http://logout.test/frontchannel' must use HTTPS.");
+        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'http://logout.test/frontchannel' must use HTTPS.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_frontchannel_logout_uri_has_fragment_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            FrontChannelLogoutUri = "https://logout.test/frontchannel#fragment"
+            r.FrontChannelLogoutUri = "https://logout.test/frontchannel#fragment";
         });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("FrontChannelLogoutUri 'https://logout.test/frontchannel#fragment' must not contain a fragment.");
+        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'https://logout.test/frontchannel#fragment' must not contain a fragment.");
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_jwks_uri_is_set_with_key_set_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.JsonWebKeySetUri = "https://client.test/jwks";
+            r.JsonWebKeySet = JsonDocument.Parse("""{"keys":[{"kty":"RSA"}]}""").RootElement.Clone();
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: jwks must not be provided when jwks_uri is specified.");
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_initiate_login_uri_is_not_https_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.InitiateLoginUri = "http://client.test/login";
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: InitiateLoginUri 'http://client.test/login' must use HTTPS.");
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_sector_identifier_uri_is_not_absolute_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.SectorIdentifierUri = "not-a-uri";
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: SectorIdentifierUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_backchannel_logout_session_required_is_set_without_uri_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            BackChannelLogoutSessionRequired = true
+            r.BackChannelLogoutSessionRequired = true;
+            r.BackChannelLogoutUri = null;
         });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("backchannel_logout_session_required requires BackChannelLogoutUri to be provided.");
+        result.Errors.Should().Contain("invalid_client_metadata: backchannel_logout_uri must be provided when backchannel_logout_session_required is enabled.");
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task validate_when_backchannel_logout_uri_is_not_https_should_return_failure()
     {
-        var parseResult = CreateParseResult(new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            BackChannelLogoutUri = "http://logout.test/backchannel"
+            r.BackChannelLogoutUri = "http://logout.test/backchannel";
         });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().Be("BackChannelLogoutUri 'http://logout.test/backchannel' must use HTTPS.");
+        result.Errors.Should().Contain("invalid_client_metadata: BackChannelLogoutUri 'http://logout.test/backchannel' must use HTTPS.");
     }
 
     [Fact]
     [Trait("Category", Category)]
-    public async Task validate_when_logout_uris_are_valid_should_return_success()
+    public async Task validate_when_backchannel_logout_uri_has_fragment_should_return_failure()
     {
-        var request = new RegisterRequest
+        var registerRequest = CreateRegisterRequest(r =>
         {
-            RedirectUris = ["https://redirect.test/callback"],
-            FrontChannelLogoutUri = "https://logout.test/frontchannel",
-            FrontChannelLogoutSessionRequired = true,
-            BackChannelLogoutUri = "https://logout.test/backchannel",
-            BackChannelLogoutSessionRequired = true
-        };
-        var parseResult = CreateParseResult(request);
+            r.BackChannelLogoutUri = "https://logout.test/backchannel#fragment";
+        });
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
-        result.IsError.Should().BeFalse();
-        result.Request.Should().BeSameAs(request);
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: BackChannelLogoutUri 'https://logout.test/backchannel#fragment' must not contain a fragment.");
+    }
+    
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_post_logout_redirect_uri_is_not_https_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.PostLogoutRedirectUris = ["http://client.test/postlogout"];
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: PostLogoutRedirectUri 'http://client.test/postlogout' must use HTTPS.");
     }
 
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_default_max_age_is_negative_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.DefaultMaxAge = -1;
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_client_metadata: default_max_age must be a non-negative integer.");
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_software_statement_is_required_but_missing_should_return_failure()
+    {
+        _options.RequireValidSoftwareStatement = true;
+        var registerRequest = CreateRegisterRequest();
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Should().Contain("invalid_software_statement: software_statement is required.");
+    }
+    
     [Theory]
     [Trait("Category", Category)]
     [MemberData(nameof(GetUnsupportedMetadataCases))]
@@ -231,10 +285,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_client_metadata");
-        result.ErrorDescription.Should().NotBeNullOrWhiteSpace();
-        result.ErrorDescription!.Should().Contain(expectedMetadata);
-        result.ErrorDescription.ToLowerInvariant().Should().Contain("unsupported");
+        result.Errors.Should().Contain($"invalid_client_metadata: Unsupported metadata field: {expectedMetadata}");
     }
 
     [Fact]
@@ -243,10 +294,8 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         _options.RequireValidSoftwareStatement = true;
         var token = new JwtSecurityToken();
-        var parseResult = CreateParseResult(new RegisterRequest
-        {
-            RedirectUris = ["https://redirect.test/callback"]
-        }, token);
+        var registerRequest = CreateRegisterRequest();
+        var parseResult = CreateParseResult(registerRequest, token);
 
         Mock.Get(_softwareStatementValidator)
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
@@ -261,13 +310,20 @@ public class DefaultDynamicClientManagementValidatorTests
 
     [Fact]
     [Trait("Category", Category)]
-    public async Task validate_when_signed_software_statement_is_not_required_should_not_call_signature_validator()
+    public async Task validate_when_software_statement_is_not_required_should_call_signature_validator()
     {
         _options.RequireValidSoftwareStatement = false;
+        var token = new JwtSecurityToken();
+        
+        Mock.Get(_softwareStatementValidator)
+            .Setup(x => x.ValidateAsync(token, CancellationToken.None))
+            .ReturnsAsync(new SoftwareStatementValidationResult(token));
+
         var parseResult = CreateParseResult(new RegisterRequest
         {
-            RedirectUris = ["https://redirect.test/callback"]
-        }, new JwtSecurityToken());
+            RedirectUris = ["https://redirect.test/callback"],
+            GrantTypes = ["authorization_code"],
+        }, token);
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
@@ -275,7 +331,7 @@ public class DefaultDynamicClientManagementValidatorTests
         Mock.Get(_softwareStatementValidator)
             .Verify(
                 x => x.ValidateAsync(It.IsAny<JwtSecurityToken>(), It.IsAny<CancellationToken>()),
-                Times.Never);
+                Times.Once);
     }
 
     [Fact]
@@ -286,18 +342,18 @@ public class DefaultDynamicClientManagementValidatorTests
         var token = new JwtSecurityToken();
         var parseResult = CreateParseResult(new RegisterRequest
         {
-            RedirectUris = ["https://redirect.test/callback"]
+            RedirectUris = ["https://redirect.test/callback"],
+            GrantTypes = ["authorization_code"],
         }, token);
 
         Mock.Get(_softwareStatementValidator)
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
-            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "Software Statement signature validation failed."));
+            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "software_statement signature validation failed."));
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_software_statement");
-        result.ErrorDescription.Should().Be("Software Statement signature validation failed.");
+        result.Errors.Should().Contain("invalid_software_statement: software_statement signature validation failed.");
     }
 
     [Fact]
@@ -307,18 +363,18 @@ public class DefaultDynamicClientManagementValidatorTests
         var token = new JwtSecurityToken();
         Mock.Get(_softwareStatementValidator)
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
-            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "Software Statement issuer is missing."));
+            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "software_statement issuer is missing."));
 
         var parseResult = CreateParseResult(new RegisterRequest
         {
-            RedirectUris = ["https://redirect.test/callback"]
+            RedirectUris = ["https://redirect.test/callback"],
+            GrantTypes = ["authorization_code"],
         }, token);
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Error.Should().Be("invalid_software_statement");
-        result.ErrorDescription.Should().Be("Software Statement issuer is missing.");
+        result.Errors.Should().Contain("invalid_software_statement: software_statement issuer is missing.");
     }
     
     
@@ -332,29 +388,15 @@ public class DefaultDynamicClientManagementValidatorTests
             SoftwareStatement = softwareStatement
         };
     }
-
+    
     public static TheoryData<RegisterRequest, string> GetUnsupportedMetadataCases => new()
     {
-        {
-            new RegisterRequest
-            {
-                JsonWebKeySetUri = "https://client.test/jwks"
-            },
-            "jwks_uri"
-        },
         {
             new RegisterRequest
             {
                 SubjectType = "pairwise"
             },
             "subject_type"
-        },
-        {
-            new RegisterRequest
-            {
-                SectorIdentifierUri = "https://client.test/sector"
-            },
-            "sector_identifier_uri"
         },
         {
             new RegisterRequest
@@ -434,4 +476,43 @@ public class DefaultDynamicClientManagementValidatorTests
             "id_token_signed_response_alg"
         }
     };
+
+    private static RegisterRequest CreateRegisterRequest(Action<RegisterRequest>? configure = null)
+    {
+        var request = new RegisterRequest
+        {
+            RedirectUris = ["https://redirect.test/callback"],
+            TokenEndpointAuthMethod = "client_secret_basic",
+            GrantTypes = ["grant_type"],
+            ResponseTypes = ["response_type"],
+            ClientName = "client_name",
+            Scope = "scope1 scope2",
+            Contacts = ["contact"],
+            LogoUri = "logo_uri",
+            AdditionalMetadata = new Dictionary<string, JsonElement>
+            {
+                { "custom_metadata", JsonDocument.Parse("\"value\"").RootElement.Clone() }
+            },
+            ApplicationType = "web",
+            BackChannelLogoutSessionRequired = true,
+            FrontChannelLogoutSessionRequired = true,
+            FrontChannelLogoutUri = "https://logout.test/frontchannel",
+            BackChannelLogoutUri = "https://logout.test/backchannel",
+            PostLogoutRedirectUris = ["https://redirect.test/postlogout"],
+            JsonWebKeySetUri = "https://client.test/jwks",
+            ClientUri = "https://client.test",
+            PolicyUri = "https://client.test/policy",
+            DefaultAcrValues = ["default_acr_value"],
+            DefaultMaxAge = 100,
+            RequireAuthTime = true,
+            InitiateLoginUri = "https://client.test/initiate_login",
+            SoftwareId = "software_id",
+            SoftwareVersion = "software_version",
+            SoftwareStatement = "software_statement",
+        };
+
+        configure?.Invoke(request);
+        
+        return request;
+    }
 }

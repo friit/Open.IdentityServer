@@ -18,7 +18,7 @@ public class RegisterRequest
     /// using simple string comparison. This field is required by OpenID Connect Dynamic Client Management.
     /// </remarks>
     [JsonPropertyName("redirect_uris")]
-    public string[]? RedirectUris { get; init; }
+    public string[]? RedirectUris { get; set; }
 
     /// <summary>
     /// OPTIONAL. Requested client authentication method for the token endpoint.
@@ -29,7 +29,7 @@ public class RegisterRequest
     /// If omitted, the default is <c>client_secret_basic</c>.
     /// </remarks>
     [JsonPropertyName("token_endpoint_auth_method")]
-    public string? TokenEndpointAuthMethod { get; init; }
+    public string? TokenEndpointAuthMethod { get; set; }
 
     /// <summary>
     /// OPTIONAL. OAuth 2.0 grant types that the client declares it will restrict itself to using.
@@ -45,7 +45,7 @@ public class RegisterRequest
     /// </list>
     /// </remarks>
     [JsonPropertyName("grant_types")]
-    public string[]? GrantTypes { get; init; }
+    public string[]? GrantTypes { get; set; }
 
     /// <summary>
     /// OPTIONAL. OAuth 2.0 response type values that the client declares it will restrict itself to using.
@@ -54,7 +54,7 @@ public class RegisterRequest
     /// If omitted, the default is that the client uses only the <c>code</c> response type.
     /// </remarks>
     [JsonPropertyName("response_types")]
-    public string[]? ResponseTypes { get; init; }
+    public string[]? ResponseTypes { get; set; }
 
     /// <summary>
     /// OPTIONAL. Name of the client to be presented to the end user.
@@ -63,7 +63,7 @@ public class RegisterRequest
     /// Localized representations may be supplied using the OpenID Connect client metadata language tag syntax.
     /// </remarks>
     [JsonPropertyName("client_name")]
-    public string? ClientName { get; init; }
+    public string? ClientName { get; set; }
 
     /// <summary>
     /// OPTIONAL. URL of the client's home page.
@@ -73,7 +73,7 @@ public class RegisterRequest
     /// followable URL. Localized representations may be supplied using the OpenID Connect client metadata language tag syntax.
     /// </remarks>
     [JsonPropertyName("client_uri")]
-    public string? ClientUri { get; init; }
+    public string? ClientUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. URL that references a logo for the client application.
@@ -83,13 +83,13 @@ public class RegisterRequest
     /// during approval. Localized representations may be supplied using the OpenID Connect client metadata language tag syntax.
     /// </remarks>
     [JsonPropertyName("logo_uri")]
-    public string? LogoUri { get; init; }
+    public string? LogoUri { get; set; }
 
     /// <summary>
     /// Space-separated list of OAuth 2.0 scope values.
     /// </summary>
     [JsonPropertyName("scope")]
-    public string? Scope { get; init; }
+    public string? Scope { get; set; }
 
     /// <summary>
     /// OPTIONAL. Email addresses of people responsible for this client.
@@ -98,7 +98,7 @@ public class RegisterRequest
     /// Providers may use these contacts to enable management or notification flows for the client.
     /// </remarks>
     [JsonPropertyName("contacts")]
-    public string[]? Contacts { get; init; }
+    public string[]? Contacts { get; set; }
 
     /// <summary>
     /// OPTIONAL. URL that the relying party provides for the end user to read its terms of service.
@@ -108,7 +108,7 @@ public class RegisterRequest
     /// Localized representations may be supplied using the OpenID Connect client metadata language tag syntax.
     /// </remarks>
     [JsonPropertyName("tos_uri")]
-    public string? TermsOfServiceUri { get; init; }
+    public string? TermsOfServiceUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. URL that the relying party provides for the end user to read how profile data will be used.
@@ -118,7 +118,7 @@ public class RegisterRequest
     /// Localized representations may be supplied using the OpenID Connect client metadata language tag syntax.
     /// </remarks>
     [JsonPropertyName("policy_uri")]
-    public string? PolicyUri { get; init; }
+    public string? PolicyUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. URL for the client's JSON Web Key Set document.
@@ -131,7 +131,7 @@ public class RegisterRequest
     /// symmetric key values. The <c>jwks_uri</c> and <c>jwks</c> parameters must not be used together.
     /// </remarks>
     [JsonPropertyName("jwks_uri")]
-    public string? JsonWebKeySetUri { get; init; }
+    public string? JsonWebKeySetUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. Client's JSON Web Key Set document, passed by value.
@@ -143,26 +143,26 @@ public class RegisterRequest
     /// The <c>jwks_uri</c> and <c>jwks</c> parameters must not be used together.
     /// </remarks>
     [JsonPropertyName("jwks")]
-    public JsonElement? JsonWebKeySet { get; init; }
+    public JsonElement? JsonWebKeySet { get; set; }
 
     /// <summary>
     /// Identifier for the software that comprises a client.
     /// </summary>
     [JsonPropertyName("software_id")]
-    public string? SoftwareId { get; init; }
+    public string? SoftwareId { get; set; }
 
     /// <summary>
     /// Version identifier for the software that comprises a client.
     /// </summary>
     [JsonPropertyName("software_version")]
-    public string? SoftwareVersion { get; init; }
+    public string? SoftwareVersion { get; set; }
     
     /// <summary>
     /// Software Statement for the software containing Client Metadata. Values in the software statement will override Client Metadata values.
     /// Optionally signed.
     /// </summary>
     [JsonPropertyName("software_statement")]
-    public string? SoftwareStatement { get; init; }
+    public string? SoftwareStatement { get; set; }
 
     // OpenID Connect Dynamic Client Management
 
@@ -178,7 +178,7 @@ public class RegisterRequest
     /// constraints.
     /// </remarks>
     [JsonPropertyName("application_type")]
-    public string? ApplicationType { get; init; }
+    public string? ApplicationType { get; set; }
 
     /// <summary>
     /// OPTIONAL. HTTPS URL used by the OpenID Provider when calculating pairwise pseudonymous subject identifiers.
@@ -188,7 +188,7 @@ public class RegisterRequest
     /// Providers using pairwise subject values should use this value in the pairwise subject identifier calculation.
     /// </remarks>
     [JsonPropertyName("sector_identifier_uri")]
-    public string? SectorIdentifierUri { get; init; }
+    public string? SectorIdentifierUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. Requested subject identifier type for responses to this client.
@@ -198,7 +198,7 @@ public class RegisterRequest
     /// <c>subject_types_supported</c> discovery metadata.
     /// </remarks>
     [JsonPropertyName("subject_type")]
-    public string? SubjectType { get; init; }
+    public string? SubjectType { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWS algorithm required for signing ID Tokens issued to this client.
@@ -208,7 +208,7 @@ public class RegisterRequest
     /// from the authorization endpoint. If omitted, the default is <c>RS256</c>.
     /// </remarks>
     [JsonPropertyName("id_token_signed_response_alg")]
-    public string? IdTokenSignedResponseAlgorithm { get; init; }
+    public string? IdTokenSignedResponseAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE algorithm required for encrypting ID Tokens issued to this client.
@@ -217,7 +217,7 @@ public class RegisterRequest
     /// When specified, the ID Token is signed and then encrypted as a nested JWT. If omitted, ID Tokens are not encrypted.
     /// </remarks>
     [JsonPropertyName("id_token_encrypted_response_alg")]
-    public string? IdTokenEncryptedResponseAlgorithm { get; init; }
+    public string? IdTokenEncryptedResponseAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE encryption algorithm required for encrypting ID Tokens issued to this client.
@@ -227,7 +227,7 @@ public class RegisterRequest
     /// This value must not be included unless <c>id_token_encrypted_response_alg</c> is also provided.
     /// </remarks>
     [JsonPropertyName("id_token_encrypted_response_enc")]
-    public string? IdTokenEncryptedResponseEncryption { get; init; }
+    public string? IdTokenEncryptedResponseEncryption { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWS algorithm required for signing UserInfo responses.
@@ -237,7 +237,7 @@ public class RegisterRequest
     /// response returns claims as a UTF-8 encoded JSON object using the <c>application/json</c> content type.
     /// </remarks>
     [JsonPropertyName("userinfo_signed_response_alg")]
-    public string? UserInfoSignedResponseAlgorithm { get; init; }
+    public string? UserInfoSignedResponseAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE algorithm required for encrypting UserInfo responses.
@@ -247,7 +247,7 @@ public class RegisterRequest
     /// If omitted, UserInfo responses are not encrypted.
     /// </remarks>
     [JsonPropertyName("userinfo_encrypted_response_alg")]
-    public string? UserInfoEncryptedResponseAlgorithm { get; init; }
+    public string? UserInfoEncryptedResponseAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE encryption algorithm required for encrypting UserInfo responses.
@@ -257,7 +257,7 @@ public class RegisterRequest
     /// This value must not be included unless <c>userinfo_encrypted_response_alg</c> is also provided.
     /// </remarks>
     [JsonPropertyName("userinfo_encrypted_response_enc")]
-    public string? UserInfoEncryptedResponseEncryption { get; init; }
+    public string? UserInfoEncryptedResponseEncryption { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWS algorithm that must be used for signing Request Objects sent to the OpenID Provider.
@@ -268,7 +268,7 @@ public class RegisterRequest
     /// If omitted, any algorithm supported by both parties may be used.
     /// </remarks>
     [JsonPropertyName("request_object_signing_alg")]
-    public string? RequestObjectSigningAlgorithm { get; init; }
+    public string? RequestObjectSigningAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE algorithm the relying party declares it may use for encrypting Request Objects sent to the OpenID Provider.
@@ -280,7 +280,7 @@ public class RegisterRequest
     /// encrypted as a nested JWT. If omitted, the relying party is not declaring whether it might encrypt Request Objects.
     /// </remarks>
     [JsonPropertyName("request_object_encryption_alg")]
-    public string? RequestObjectEncryptionAlgorithm { get; init; }
+    public string? RequestObjectEncryptionAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWE encryption algorithm the relying party declares it may use for encrypting Request Objects.
@@ -290,7 +290,7 @@ public class RegisterRequest
     /// This value must not be included unless <c>request_object_encryption_alg</c> is also provided.
     /// </remarks>
     [JsonPropertyName("request_object_encryption_enc")]
-    public string? RequestObjectEncryption { get; init; }
+    public string? RequestObjectEncryption { get; set; }
 
     /// <summary>
     /// OPTIONAL. JWS algorithm that must be used for signing JWTs used to authenticate the client at the token endpoint.
@@ -302,7 +302,7 @@ public class RegisterRequest
     /// If omitted, any algorithm supported by both parties may be used.
     /// </remarks>
     [JsonPropertyName("token_endpoint_auth_signing_alg")]
-    public string? TokenEndpointAuthSigningAlgorithm { get; init; }
+    public string? TokenEndpointAuthSigningAlgorithm { get; set; }
 
     /// <summary>
     /// OPTIONAL. Default maximum authentication age, in seconds.
@@ -313,7 +313,7 @@ public class RegisterRequest
     /// age is specified.
     /// </remarks>
     [JsonPropertyName("default_max_age")]
-    public int? DefaultMaxAge { get; init; }
+    public int? DefaultMaxAge { get; set; }
 
     /// <summary>
     /// OPTIONAL. Indicates whether the <c>auth_time</c> claim is required in ID Tokens.
@@ -323,7 +323,7 @@ public class RegisterRequest
     /// <see langword="false" />.
     /// </remarks>
     [JsonPropertyName("require_auth_time")]
-    public bool? RequireAuthTime { get; init; }
+    public bool? RequireAuthTime { get; set; }
 
     /// <summary>
     /// OPTIONAL. Default requested Authentication Context Class Reference values.
@@ -334,7 +334,7 @@ public class RegisterRequest
     /// The <c>acr_values</c> request parameter or an individual <c>acr</c> claim request overrides these defaults.
     /// </remarks>
     [JsonPropertyName("default_acr_values")]
-    public string[]? DefaultAcrValues { get; init; }
+    public string[]? DefaultAcrValues { get; set; }
 
     /// <summary>
     /// OPTIONAL. HTTPS URI that a third party can use to initiate login by the relying party.
@@ -344,7 +344,7 @@ public class RegisterRequest
     /// <c>iss</c> parameters and should support <c>target_link_uri</c>.
     /// </remarks>
     [JsonPropertyName("initiate_login_uri")]
-    public string? InitiateLoginUri { get; init; }
+    public string? InitiateLoginUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. Request URI values pre-registered by the relying party for use at the OpenID Provider.
@@ -356,7 +356,7 @@ public class RegisterRequest
     /// the base64url-encoded SHA-256 hash of the file contents as the URI fragment so cache changes can be detected.
     /// </remarks>
     [JsonPropertyName("request_uris")]
-    public string[]? RequestUris { get; init; }
+    public string[]? RequestUris { get; set; }
 
     /// <summary>
     /// OPTIONAL. Front-channel logout URI for the client.
@@ -365,13 +365,13 @@ public class RegisterRequest
     /// When supplied, the OpenID Provider can notify the client of logout by loading this URI in the user agent.
     /// </remarks>
     [JsonPropertyName("frontchannel_logout_uri")]
-    public string? FrontChannelLogoutUri { get; init; }
+    public string? FrontChannelLogoutUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. Indicates whether the OP should include the session ID when invoking front-channel logout.
     /// </summary>
     [JsonPropertyName("frontchannel_logout_session_required")]
-    public bool? FrontChannelLogoutSessionRequired { get; init; }
+    public bool? FrontChannelLogoutSessionRequired { get; set; }
 
     /// <summary>
     /// OPTIONAL. Back-channel logout URI for the client.
@@ -380,21 +380,21 @@ public class RegisterRequest
     /// When supplied, the OpenID Provider can notify the client of logout by sending a logout token to this URI.
     /// </remarks>
     [JsonPropertyName("backchannel_logout_uri")]
-    public string? BackChannelLogoutUri { get; init; }
+    public string? BackChannelLogoutUri { get; set; }
 
     /// <summary>
     /// OPTIONAL. Indicates whether the OP should include the session ID claim in back-channel logout tokens.
     /// </summary>
     [JsonPropertyName("backchannel_logout_session_required")]
-    public bool? BackChannelLogoutSessionRequired { get; init; }
+    public bool? BackChannelLogoutSessionRequired { get; set; }
 
     [JsonPropertyName("post_logout_redirect_uris")]
-    public string[]? PostLogoutRedirectUris { get; init; }
+    public string[]? PostLogoutRedirectUris { get; set; }
 
 
     // RFC 7591 extension metadata / vendor-specific parameters
 
     [JsonExtensionData]
-    public Dictionary<string, JsonElement>? AdditionalMetadata { get; init; }
+    public Dictionary<string, JsonElement>? AdditionalMetadata { get; set; }
     
 }

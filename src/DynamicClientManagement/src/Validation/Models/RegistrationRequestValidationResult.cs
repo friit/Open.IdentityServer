@@ -7,23 +7,35 @@ namespace Open.IdentityServer.DynamicClientManagement.Validation.Models;
 
 public class RegistrationRequestValidationResult
 {
-    public bool IsError { get; set; }
-    public string? ErrorDescription { get; set; }
-    public string Error { get; set; }
-    
+    public bool IsError => Errors.Length != 0;
+
+
+
+    public string[] Errors { get; set; }
+
     public RegisterRequest? Request { get; private set; }
 
     public RegistrationRequestValidationResult(RegisterRequest request)
     {
         Request = request;
-        IsError = false;
+        Errors = Array.Empty<string>();
+    }
+
+    public RegistrationRequestValidationResult(
+        RegisterRequest request,
+        string error,
+        string? errorDescription = null)
+        : this(request)
+    {
+
+        Errors = [errorDescription is null ? error : $"{error}: {errorDescription}"];
     }
     
-    public RegistrationRequestValidationResult(RegisterRequest request, string error, string? errorDescription = null) : base()
+    public void AddError(string error, string? errorDescription = null)
     {
-        Request = request;
-        Error = error;
-        ErrorDescription = errorDescription;
-        IsError = true;
+        Errors = Errors.Append(
+            errorDescription is null ? error : $"{error}: {errorDescription}"
+        ).ToArray();
     }
+
 }

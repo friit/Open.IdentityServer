@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Models.Results;
+using Open.IdentityServer.DynamicClientManagement.Stores;
 using Open.IdentityServer.Models;
 using Open.IdentityServer.Stores;
 
@@ -17,28 +18,28 @@ public class DynamicClientManagementService : IDynamicClientManagementService
 {
     private const string JsonWebKeySecretType = "JWK";
 
-    private readonly IClientStore _clientStore;
+    private readonly IDynamicClientManagementStore _clientStore;
     private readonly ILogger<DynamicClientManagementService> _logger;
 
-    public DynamicClientManagementService(IClientStore clientStore, ILogger<DynamicClientManagementService> logger)
+    public DynamicClientManagementService(IDynamicClientManagementStore clientStore, ILogger<DynamicClientManagementService> logger)
     {
         _clientStore = clientStore;
         _logger = logger;
     }
 
-    public Task<DynamicClientManagementResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<DynamicClientManagementResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var generatedClientId = Guid.NewGuid().ToString();
-        var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var grantTypes = request.GrantTypes ?? ["authorization_code"];
+        // Defaults to client_secret_basic if not specified according to the spec.
         var tokenEndpointAuthMethod = request.TokenEndpointAuthMethod ?? "client_secret_basic";
-        var generatedClientSecret = tokenEndpointAuthMethod is "client_secret_basic" or "client_secret_post"
-            ? Guid.NewGuid().ToString()
-            : null;
-        var clientSecrets = CreateClientSecrets(request, tokenEndpointAuthMethod, generatedClientSecret);
 
+        var generatedClientId = GenerateClientId();
+        var generatedClientSecret = GenerateClientSecret(tokenEndpointAuthMethod);
+        
+        var grantTypes = request.GrantTypes ?? ["authorization_code"];
+        var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
         var client = new Client()
         {
             ClientId = generatedClientId,
@@ -49,10 +50,10 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             PostLogoutRedirectUris = request.PostLogoutRedirectUris,
             AllowedGrantTypes = grantTypes,
             AllowedScopes = scopes,
-            ClientSecrets = clientSecrets,
+            ClientSecrets = CreateClientSecrets(request, tokenEndpointAuthMethod, generatedClientSecret),
             RequireClientSecret = tokenEndpointAuthMethod != "none",
             RequirePkce = grantTypes.Contains("authorization_code"),
-            AllowOfflineAccess = scopes?.Contains("offline_access") == true,
+            AllowOfflineAccess = scopes?.Contains("offline_access") == true || grantTypes.Contains("refresh_token"),
             AllowAccessTokensViaBrowser = grantTypes.Contains("implicit"),
             FrontChannelLogoutUri = request.FrontChannelLogoutUri,
             FrontChannelLogoutSessionRequired = request.FrontChannelLogoutSessionRequired ?? true,
@@ -60,7 +61,6 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             BackChannelLogoutSessionRequired = request.BackChannelLogoutSessionRequired ?? true,
             UserSsoLifetime = request.DefaultMaxAge,
             InitiateLoginUri = request.InitiateLoginUri,
-            
         };
         
         if(request.Contacts != null)
@@ -88,14 +88,14 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             client.Properties["software_version"] = request.SoftwareVersion;
         }
 
-        //TODO WRITE A CLIENT STORE
+        await _clientStore.RegisterClientAsync(client, cancellationToken);
 
         _logger.LogDebug(
             "Registered dynamic client {clientId} using token endpoint auth method {tokenEndpointAuthMethod}.",
             generatedClientId,
             tokenEndpointAuthMethod);
 
-        return Task.FromResult(new DynamicClientManagementResult
+        return new DynamicClientManagementResult
         {
             Client = client,
             ClientSecret = generatedClientSecret,
@@ -104,10 +104,27 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
             EffectiveRequest = request
-        });
+        };
+    }
+    
+    protected virtual string GenerateClientId()
+    {
+        return Guid.NewGuid().ToString();
+    }
+    
+    protected virtual string? GenerateClientSecret(string tokenEndpointAuthMethod)
+    {
+        
+        return tokenEndpointAuthMethod switch{
+            "none" => null,
+            "client_secret_basic" or "client_secret_post" => Guid.NewGuid().ToString(),
+            _ => throw new InvalidDynamicClientManagementRequestException(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                $"token_endpoint_auth_method '{tokenEndpointAuthMethod}' is not supported.")
+        };
     }
 
-    private static ICollection<Secret> CreateClientSecrets(
+    protected virtual ICollection<Secret> CreateClientSecrets(
         RegisterRequest request,
         string tokenEndpointAuthMethod,
         string? generatedClientSecret)
@@ -124,7 +141,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         };
     }
 
-    private static string HashSharedSecret(string sharedSecret)
+    protected virtual string HashSharedSecret(string sharedSecret)
     {
         var bytes = Encoding.UTF8.GetBytes(sharedSecret);
         var hash = SHA256.HashData(bytes);
@@ -132,7 +149,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         return Convert.ToBase64String(hash);
     }
 
-    private static ICollection<Secret> CreateJwkSecrets(RegisterRequest request)
+    protected virtual ICollection<Secret> CreateJwkSecrets(RegisterRequest request)
     {
         if (request.JsonWebKeySet is null || request.JsonWebKeySet.Value.ValueKind != JsonValueKind.Object)
         {

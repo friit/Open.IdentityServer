@@ -11,42 +11,21 @@ using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.Validation.Default;
 
+/// <summary>
+/// Validates parsed dynamic client registration requests.
+/// </summary>
 public class DefaultDynamicClientManagementValidator : IDynamicClientManagementValidator
 {
- 
-    private delegate string? UnsupportedMetadataDelegate(RegisterRequest request);
-
-    private static readonly UnsupportedMetadataDelegate[] _unsupportedMetadataDelegates =
-    [
-        r => r.JsonWebKeySetUri is not null ? "jwks_uri" : null,
-        r => r.SubjectType is not null ? "subject_type" : null,
-        r => r.SectorIdentifierUri is not null ? "sector_identifier_uri" : null,
-        r => r.RequestUris is not null ? "request_uris" : null,
-        r => r.TokenEndpointAuthSigningAlgorithm is not null ? "token_endpoint_auth_signing_alg" : null, 
-        r => r.RequestObjectEncryption is not null ? "request_object_encryption" : null,
-        r => r.RequestObjectEncryptionAlgorithm is not null ? "request_object_encryption_alg" : null,
-        r => r.RequestObjectSigningAlgorithm is not null ? "request_object_signing_alg" : null,
-        r => r.UserInfoEncryptedResponseEncryption is not null ? "userinfo_encrypted_response_enc" : null,
-        r => r.UserInfoEncryptedResponseAlgorithm is not null ? "userinfo_encrypted_response_alg" : null,
-        r => r.UserInfoSignedResponseAlgorithm is not null ? "userinfo_signed_response_alg" : null,
-        r => r.IdTokenEncryptedResponseEncryption is not null ? "id_token_encrypted_response_enc" : null,
-        r => r.IdTokenEncryptedResponseAlgorithm is not null ? "id_token_encrypted_response_alg" : null,
-        r => r.IdTokenSignedResponseAlgorithm is not null ? "id_token_signed_response_alg" : null,
-    ];
-    
-    private static IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request)
-    {
-        return _unsupportedMetadataDelegates
-            .Select(d => d(request))
-            .Where(m => m is not null)
-            .Select(m => m!)
-            .ToList();
-    }
-    
     private readonly IOptions<DynamicClientManagementOptions> _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
     private readonly ILogger<IDynamicClientManagementValidator> _logger;
-
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultDynamicClientManagementValidator"/> class.
+    /// </summary>
+    /// <param name="options">The dynamic client management options.</param>
+    /// <param name="softwareStatementValidator">Validates supplied software statements.</param>
+    /// <param name="logger">The logger used to write diagnostic messages.</param>
     public DefaultDynamicClientManagementValidator(
         IOptions<DynamicClientManagementOptions> options,
         ISoftwareStatementValidator softwareStatementValidator,
@@ -57,167 +36,278 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public async Task<RegistrationRequestValidationResult> ValidateAsync(
         RegistrationRequestParseResult parseResult,
         CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Validating Dynamic Client Management Request");
-        
+
         cancellationToken.ThrowIfCancellationRequested();
 
-        var unsupportedMetadata = GetUnsupportedMetadata(parseResult.Request);
-        if (unsupportedMetadata.Any())
+        var validationResult = new RegistrationRequestValidationResult(parseResult.Request);
+
+        ValidateUnsupportedMetadata(parseResult.Request, validationResult);
+        ValidateGrantTypes(parseResult.Request, validationResult);
+        ValidateRedirectUris(parseResult.Request, validationResult);
+        ValidateJsonWebKeySetUri(parseResult.Request, validationResult);
+        ValidateInitiateLoginUri(parseResult.Request, validationResult);
+        ValidateSectorIdentifierUri(parseResult.Request, validationResult);
+        ValidatePostLogoutRedirectUris(parseResult.Request, validationResult);
+        ValidateFrontChannelLogoutUri(parseResult.Request, validationResult);
+        ValidateBackChannelLogoutUri(parseResult.Request, validationResult);
+        ValidateDefaultMaxAge(parseResult.Request, validationResult);
+
+        await ValidateSoftwareStatementAsync(parseResult, validationResult, cancellationToken);
+
+        if (validationResult.IsError)
         {
-            var unsupportedMetadataString = string.Join(",\n", unsupportedMetadata);
-            _logger.LogError("Unsupported metadata fields: {unsupportedMetadata}", unsupportedMetadataString);
-            return new RegistrationRequestValidationResult(
-                parseResult.Request,
-                Constants.RegisterErrors.InvalidClientMetadata,
-                $"Unsupported metadata fields: {unsupportedMetadataString}"
+            _logger.LogError("Dynamic Client Management Request validation failed with errors: {errors}",
+                string.Join(",\n ", validationResult.Errors)
             );
         }
-        
-        if (parseResult.Request.RedirectUris == null || !parseResult.Request.RedirectUris.Any())
-        {
-            _logger.LogError("RedirectUris must be provided.");
-            return new RegistrationRequestValidationResult(
-                parseResult.Request,
-                Constants.RegisterErrors.InvalidClientMetadata,
-                "RedirectUris must be provided."
-            );
-        }
-        
-        
-        foreach (var redirectUri in parseResult.Request.RedirectUris)
-        {
-            if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out Uri? result))
-            {
-                _logger.LogError("RedirectUri '{redirectUri}' must be an absolute URI.", redirectUri);
-                return new RegistrationRequestValidationResult(
-                    parseResult.Request,
-                    Constants.RegisterErrors.InvalidRedirectUri,
-                    $"RedirectUri '{redirectUri}' must be an absolute URI."
-                );
-            }
 
-            if (result.Scheme == Uri.UriSchemeHttp)
-            {
-                _logger.LogError("RedirectUri '{redirectUri}' must not use HTTP.", redirectUri);
-                return new RegistrationRequestValidationResult(
-                    parseResult.Request,
-                    Constants.RegisterErrors.InvalidRedirectUri,
-                    $"RedirectUri '{redirectUri}' must not use HTTP."
-                );
-            }
-        }
-
-        var frontChannelLogoutValidationResult = ValidateLogoutUri(
-            parseResult.Request,
-            parseResult.Request.FrontChannelLogoutUri,
-            parseResult.Request.FrontChannelLogoutSessionRequired.HasValue,
-            "FrontChannelLogoutUri",
-            "frontchannel_logout_session_required",
-            allowFragment: false);
-        if (frontChannelLogoutValidationResult != null)
-        {
-            return frontChannelLogoutValidationResult;
-        }
-
-        var backChannelLogoutValidationResult = ValidateLogoutUri(
-            parseResult.Request,
-            parseResult.Request.BackChannelLogoutUri,
-            parseResult.Request.BackChannelLogoutSessionRequired.HasValue,
-            "BackChannelLogoutUri",
-            "backchannel_logout_session_required");
-        if (backChannelLogoutValidationResult != null)
-        {
-            return backChannelLogoutValidationResult;
-        }
-
-        if (_options.Value.RequireValidSoftwareStatement)
-        {
-            if (parseResult.SoftwareStatement is null)
-            {
-                _logger.LogError("SoftwareStatement is required.");
-                return new RegistrationRequestValidationResult(
-                    parseResult.Request,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "SoftwareStatement is required."
-                );
-            }
-            
-            var validationResult = await _softwareStatementValidator.ValidateAsync(
-                parseResult.SoftwareStatement,
-                cancellationToken
-            );
-
-            if (validationResult.IsError)
-            {
-                _logger.LogError(validationResult.ErrorDescription);
-                return new RegistrationRequestValidationResult(
-                    parseResult.Request,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    validationResult.ErrorDescription
-                );
-            }
-        }
-        
-        return new RegistrationRequestValidationResult(parseResult.Request);
+        return validationResult;
     }
 
-    private RegistrationRequestValidationResult? ValidateLogoutUri(
-        RegisterRequest request,
-        string? logoutUri,
-        bool hasDependentFlag,
-        string propertyName,
-        string dependentFlagName,
-        bool allowFragment = true)
+    private void ValidateUnsupportedMetadata(RegisterRequest request, RegistrationRequestValidationResult validationResult)
     {
-        if (string.IsNullOrWhiteSpace(logoutUri))
+        foreach (var unsupportedMetadataField in GetUnsupportedMetadata(request))
         {
-            if (!hasDependentFlag)
-            {
-                return null;
-            }
-
-            var errorDescription = $"{dependentFlagName} requires {propertyName} to be provided.";
-            _logger.LogError(errorDescription);
-            return new RegistrationRequestValidationResult(
-                request,
+            validationResult.AddError(
                 Constants.RegisterErrors.InvalidClientMetadata,
-                errorDescription);
+                Errors.UnsupportedMetadataField(unsupportedMetadataField));
+        }
+    }
+
+    private void ValidateGrantTypes(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.GrantTypes == null || !request.GrantTypes.Any())
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.GrantTypesRequired);
+        }
+    }
+
+    private void ValidateRedirectUris(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.RedirectUris == null || !request.RedirectUris.Any())
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.RedirectUrisRequired);
+            return;
+        }
+        
+        foreach (var uri in request.RedirectUris)
+        {
+            ValidateUri(uri, "RedirectUri", validationResult);
+        }
+    }
+
+    private void ValidatePostLogoutRedirectUris(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.PostLogoutRedirectUris == null || !request.PostLogoutRedirectUris.Any())
+        {
+            return;
         }
 
-        if (!Uri.TryCreate(logoutUri, UriKind.Absolute, out var parsedLogoutUri))
+        foreach (var uri in request.PostLogoutRedirectUris)
         {
-            var errorDescription = $"{propertyName} '{logoutUri}' must be an absolute URI.";
-            _logger.LogError(errorDescription);
-            return new RegistrationRequestValidationResult(
-                request,
-                Constants.RegisterErrors.InvalidClientMetadata,
-                errorDescription);
+            ValidateUri(uri, "PostLogoutRedirectUri", validationResult);
+        }
+    }
+
+    private void ValidateJsonWebKeySetUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (string.IsNullOrWhiteSpace(request.JsonWebKeySetUri))
+        {
+            return;
         }
 
-        if (parsedLogoutUri.Scheme != Uri.UriSchemeHttps)
+        ValidateUri(request.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
+
+        if (request.JsonWebKeySet is not null)
         {
-            var errorDescription = $"{propertyName} '{logoutUri}' must use HTTPS.";
-            _logger.LogError(errorDescription);
-            return new RegistrationRequestValidationResult(
-                request,
+            validationResult.AddError(
                 Constants.RegisterErrors.InvalidClientMetadata,
-                errorDescription);
+                Errors.JsonWebKeySetDisallowed);
+        }
+    }
+
+    private void ValidateInitiateLoginUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (string.IsNullOrWhiteSpace(request.InitiateLoginUri))
+        {
+            return;
         }
 
-        if (!allowFragment && !string.IsNullOrEmpty(parsedLogoutUri.Fragment))
+        ValidateUri(request.InitiateLoginUri, "InitiateLoginUri", validationResult);
+    }
+
+    private void ValidateSectorIdentifierUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (string.IsNullOrWhiteSpace(request.SectorIdentifierUri))
         {
-            var errorDescription = $"{propertyName} '{logoutUri}' must not contain a fragment.";
-            _logger.LogError(errorDescription);
-            return new RegistrationRequestValidationResult(
-                request,
-                Constants.RegisterErrors.InvalidClientMetadata,
-                errorDescription);
+            return;
         }
 
-        return null;
+        ValidateUri(request.SectorIdentifierUri, "SectorIdentifierUri", validationResult);
+    }
+
+    private void ValidateFrontChannelLogoutUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.FrontChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.FrontChannelLogoutUri))
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.FrontChannelLogoutUriRequired);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FrontChannelLogoutUri))
+        {
+            return;
+        }
+
+        ValidateUri(request.FrontChannelLogoutUri, "FrontChannelLogoutUri", validationResult);
+    }
+
+    private void ValidateBackChannelLogoutUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.BackChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.BackChannelLogoutUri))
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.BackChannelLogoutUriRequired);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.BackChannelLogoutUri))
+        {
+            return;
+        }
+
+        ValidateUri(request.BackChannelLogoutUri, "BackChannelLogoutUri", validationResult);
+    }
+
+    private void ValidateDefaultMaxAge(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        if (request.DefaultMaxAge is < 0)
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.DefaultMaxAgeInvalid);
+        }
+    }
+
+    private async Task ValidateSoftwareStatementAsync(
+        RegistrationRequestParseResult parseResult,
+        RegistrationRequestValidationResult validationResult,
+        CancellationToken cancellationToken)
+    {
+        if (_options.Value.RequireValidSoftwareStatement && parseResult.SoftwareStatement is null)
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidSoftwareStatement, 
+                Errors.SoftwareStatementRequired);
+            return;
+        }
+
+        if (parseResult.SoftwareStatement is null)
+        {
+            return;
+        }
+
+        var softwareStatementValidationResult = await _softwareStatementValidator.ValidateAsync(
+            parseResult.SoftwareStatement,
+            cancellationToken
+        );
+
+        if (softwareStatementValidationResult.IsError)
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidSoftwareStatement,
+                softwareStatementValidationResult.ErrorDescription);
+        }
+    }
+    
+    private void ValidateUri(
+        string uri,
+        string uriName,
+        RegistrationRequestValidationResult validationResult)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? result))
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.UriMustBeAbsolute(uriName, uri));
+            return;
+        }
+
+        if (result.Scheme != Uri.UriSchemeHttps)
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.UriMustUseHttps(uriName, uri));
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(result.Fragment))
+        {
+            validationResult.AddError(
+                Constants.RegisterErrors.InvalidClientMetadata,
+                Errors.UriMustNotContainFragment(uriName, uri));
+        }
+    }
+    
+    /// <summary>
+    /// Metadata fields that are not supported by Open.IdentityServer from the Dynamic Client Management specification.
+    /// </summary>
+    private static readonly (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =
+    [
+        ("subject_type", r => r.SubjectType is not null),
+        ("request_uris", r => r.RequestUris is not null),
+        ("token_endpoint_auth_signing_alg", r => r.TokenEndpointAuthSigningAlgorithm is not null),
+        ("request_object_encryption", r => r.RequestObjectEncryption is not null),
+        ("request_object_encryption_alg", r => r.RequestObjectEncryptionAlgorithm is not null),
+        ("request_object_signing_alg", r => r.RequestObjectSigningAlgorithm is not null),
+        ("userinfo_encrypted_response_enc", r => r.UserInfoEncryptedResponseEncryption is not null),
+        ("userinfo_encrypted_response_alg", r => r.UserInfoEncryptedResponseAlgorithm is not null),
+        ("userinfo_signed_response_alg", r => r.UserInfoSignedResponseAlgorithm is not null),
+        ("id_token_encrypted_response_enc", r => r.IdTokenEncryptedResponseEncryption is not null),
+        ("id_token_encrypted_response_alg", r => r.IdTokenEncryptedResponseAlgorithm is not null),
+        ("id_token_signed_response_alg", r => r.IdTokenSignedResponseAlgorithm is not null),
+    ];
+    
+    private static IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request) =>
+        UnsupportedMetadataRules
+            .Where(r => r.IsPresent(request))
+            .Select(r => r.Name)
+            .ToList();
+
+    internal static class Errors
+    {
+        public static string UnsupportedMetadataField(string unsupportedMetadataField) 
+            => $"Unsupported metadata field: {unsupportedMetadataField}";
+        
+        public static string GrantTypesRequired = "grant_types must be provided.";
+        public static string RedirectUrisRequired = "redirect_uris must be provided.";
+
+        public static string JsonWebKeySetDisallowed =
+            "jwks must not be provided when jwks_uri is specified.";
+
+        public static string FrontChannelLogoutUriRequired =
+            "frontchannel_logout_session_required requires front_channel_logout_uri to be provided.";
+
+        public static string BackChannelLogoutUriRequired =
+            "backchannel_logout_uri must be provided when backchannel_logout_session_required is enabled.";
+        public static string DefaultMaxAgeInvalid = "default_max_age must be a non-negative integer.";
+        public static string SoftwareStatementRequired = "software_statement is required.";
+        public static string UriMustBeAbsolute(string uriName, string uri) => $"{uriName} '{uri}' must be an absolute URI.";
+        public static string UriMustUseHttps(string uriName, string uri) => $"{uriName} '{uri}' must use HTTPS.";
+        public static string UriMustNotContainFragment(string uriName, string uri) => $"{uriName} '{uri}' must not contain a fragment.";
+        
     }
 }

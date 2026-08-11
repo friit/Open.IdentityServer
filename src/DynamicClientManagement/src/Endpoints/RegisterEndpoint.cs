@@ -13,6 +13,9 @@ using Open.IdentityServer.DynamicClientManagement.Validation;
 
 namespace Open.IdentityServer.DynamicClientManagement.Endpoints;
 
+/// <summary>
+/// Processes dynamic client registration requests.
+/// </summary>
 public class RegisterEndpoint
 {
     private readonly IDynamicClientManagementRequestParser _registrationRequestParser;
@@ -21,6 +24,14 @@ public class RegisterEndpoint
     private readonly IDynamicClientManagementResponseGenerator _responseGenerator;
     private readonly ILogger<RegisterEndpoint> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterEndpoint"/> class.
+    /// </summary>
+    /// <param name="registrationRequestParser">Parses incoming registration requests.</param>
+    /// <param name="validator">Validates parsed registration requests.</param>
+    /// <param name="service">Performs client registration.</param>
+    /// <param name="responseGenerator">Creates the registration response payload.</param>
+    /// <param name="logger">The logger used to write diagnostic messages.</param>
     public RegisterEndpoint(
         IDynamicClientManagementRequestParser registrationRequestParser,
         IDynamicClientManagementValidator validator,
@@ -34,6 +45,11 @@ public class RegisterEndpoint
         _validator = validator;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Processes a dynamic client registration request.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
     public async Task ProcessRegistrationAsync(HttpContext context)
     {
         _logger.LogDebug("Start Dynamic Client Management request");
@@ -60,12 +76,12 @@ public class RegisterEndpoint
             var validationResult = await _validator.ValidateAsync(parseResult, context.RequestAborted);
             if (validationResult.IsError)
             {
-                _logger.LogWarning("Invalid register request");
+                _logger.LogError("Invalid register request {errors}", string.Join(",\n ", validationResult.Errors));
 
                 await WriteErrorResultAsync(
                     context,
-                    validationResult.Error!,
-                    validationResult.ErrorDescription
+                    string.Join(",\n ", validationResult.Errors),
+                    null
                 );
 
                 return;
@@ -112,30 +128,42 @@ public class RegisterEndpoint
             _logger.LogTrace("End registration request");
         }
     }
-    
+
+    /// <summary>
+    /// Writes a successful registration response to the current HTTP response.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
+    /// <param name="registerResponse">The response payload to return.</param>
     protected async Task WriteClientInfoResultAsync(HttpContext context, RegisterResponse registerResponse)
     {
         context.Response.StatusCode = (int)HttpStatusCode.Created;
-        
+
         context.Response.ContentType = "application/json";
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
-        
+
         await context.Response.WriteAsJsonAsync(registerResponse);
     }
-    
+
+    /// <summary>
+    /// Writes an error response to the current HTTP response.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
+    /// <param name="error">The error code to return.</param>
+    /// <param name="errorDescription">An optional error description.</param>
+    /// <param name="statusCode">The HTTP status code to return.</param>
     protected async Task WriteErrorResultAsync(
-        HttpContext context, 
-        string error, 
+        HttpContext context,
+        string error,
         string? errorDescription,
         HttpStatusCode statusCode = HttpStatusCode.BadRequest)
     {
         context.Response.StatusCode = (int)statusCode;
-        
+
         context.Response.ContentType = "application/json";
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
-        
+
         await context.Response.WriteAsJsonAsync(new
         {
             error,
