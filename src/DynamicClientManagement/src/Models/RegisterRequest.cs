@@ -52,6 +52,7 @@ public class RegisterRequest
     /// </summary>
     /// <remarks>
     /// If omitted, the default is that the client uses only the <c>code</c> response type.
+    /// Not supported by IdentityServer, it's inferred from the grant types.
     /// </remarks>
     [JsonPropertyName("response_types")]
     public string[]? ResponseTypes { get; set; }

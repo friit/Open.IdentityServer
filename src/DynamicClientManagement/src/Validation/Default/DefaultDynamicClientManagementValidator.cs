@@ -274,6 +274,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     protected virtual (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =>
     [
         ("subject_type", r => r.SubjectType is not null),
+        ("response_types", r => r.ResponseTypes is not null),
         ("request_uris", r => r.RequestUris is not null),
         ("token_endpoint_auth_signing_alg", r => r.TokenEndpointAuthSigningAlgorithm is not null),
         ("request_object_encryption", r => r.RequestObjectEncryption is not null),

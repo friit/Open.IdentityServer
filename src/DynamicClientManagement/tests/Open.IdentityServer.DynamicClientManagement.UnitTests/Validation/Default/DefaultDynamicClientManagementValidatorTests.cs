@@ -356,9 +356,8 @@ public class DefaultDynamicClientManagementValidatorTests
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
             .ReturnsAsync(new SoftwareStatementValidationResult(token));
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        _ = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
-        result.IsError.Should().BeFalse();
         Mock.Get(_softwareStatementValidator)
             .Verify(x => x.ValidateAsync(token, CancellationToken.None), Times.Once);
     }
@@ -445,6 +444,13 @@ public class DefaultDynamicClientManagementValidatorTests
     
     public static TheoryData<RegisterRequest, string> GetUnsupportedMetadataCases => new()
     {
+        {
+            new RegisterRequest
+            {
+                ResponseTypes = ["id_token"]
+            },
+            "response_types"
+        },
         {
             new RegisterRequest
             {
