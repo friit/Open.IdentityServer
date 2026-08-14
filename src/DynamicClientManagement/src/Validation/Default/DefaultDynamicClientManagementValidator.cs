@@ -245,8 +245,9 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     
     /// <summary>
     /// Metadata fields that are not supported by Open.IdentityServer from the Dynamic Client Management specification.
+    /// Override this property to add or move unsupported metadata fields.
     /// </summary>
-    private static readonly (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =
+    protected virtual (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =>
     [
         ("subject_type", r => r.SubjectType is not null),
         ("request_uris", r => r.RequestUris is not null),
@@ -262,7 +263,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         ("id_token_signed_response_alg", r => r.IdTokenSignedResponseAlgorithm is not null),
     ];
     
-    private static IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request) =>
+    private IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request) =>
         UnsupportedMetadataRules
             .Where(r => r.IsPresent(request))
             .Select(r => r.Name)
