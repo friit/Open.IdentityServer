@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Services;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
+using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 using Open.IdentityServer.Models;
 using Xunit;
 
@@ -135,7 +137,7 @@ public class RegisterEndpointTests
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
-        var validationResult = new RegistrationRequestValidationResult(registerRequest, "test_error", "test_description");
+        var validationResult = new RegistrationRequestValidationResult(registerRequest, new GrantTypesRequiredError());
         Mock.Get(_validator)
             .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(validationResult);
@@ -146,7 +148,7 @@ public class RegisterEndpointTests
         ExpectNoCacheJsonResponse(_context);
 
         var response = await ReadResponseJsonAsync(_context);
-        response.GetProperty("error").GetString().Should().Be(string.Join(",\n ", validationResult.Errors));        
+        response.GetProperty("error").GetString().Should().Be(string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())));        
         Mock.Get(_service)
             .Verify(
                 x => x.RegisterAsync(

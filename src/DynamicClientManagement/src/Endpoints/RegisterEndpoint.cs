@@ -76,11 +76,11 @@ public class RegisterEndpoint
             var validationResult = await _validator.ValidateAsync(parseResult, context.RequestAborted);
             if (validationResult.IsError)
             {
-                _logger.LogError("Invalid register request {errors}", string.Join(",\n ", validationResult.Errors));
+                _logger.LogError("Invalid register request {errors}", string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())));
 
                 await WriteErrorResultAsync(
                     context,
-                    string.Join(",\n ", validationResult.Errors),
+                    string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())),
                     null
                 );
 

@@ -14,4 +14,11 @@ internal static class Constants
         internal const string ServerError = "server_error";
         internal const string UnapprovedSoftwareStatement = "unapproved_software_statement";
     }
+
+    internal static class TokenEndpointAuthMethod
+    {
+        internal const string PrivateKeyJwt = "private_key_jwt";
+        internal const string ClientSecretPost = "client_secret_post";
+        internal const string ClientSecretBasic = "client_secret_basic";
+    }
 }

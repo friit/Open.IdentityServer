@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -16,6 +17,7 @@ using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
+using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 using System.Text.Json;
 using Xunit;
 
@@ -49,7 +51,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: redirect_uris must be provided.");
+        AssertSingleError<RedirectUrisRequiredError>(result.Errors, "invalid_client_metadata: redirect_uris must be provided.");
     }
 
     [Fact]
@@ -61,7 +63,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: RedirectUri 'not-a-uri' must be an absolute URI.");
+        AssertSingleError<UriMustBeAbsoluteError>(result.Errors, "invalid_client_metadata: RedirectUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
@@ -73,7 +75,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: RedirectUri 'http://redirect.test/callback' must use HTTPS.");
+        AssertSingleError<UriMustUseHttpsError>(result.Errors, "invalid_client_metadata: RedirectUri 'http://redirect.test/callback' must use HTTPS.");
     }
     
 
@@ -90,7 +92,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: frontchannel_logout_session_required requires front_channel_logout_uri to be provided.");
+        AssertSingleError<FrontChannelLogoutUriRequiredError>(result.Errors, "invalid_client_metadata: frontchannel_logout_session_required requires front_channel_logout_uri to be provided.");
     }
 
     [Fact]
@@ -105,7 +107,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'not-a-uri' must be an absolute URI.");
+        AssertSingleError<UriMustBeAbsoluteError>(result.Errors, "invalid_client_metadata: FrontChannelLogoutUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
@@ -120,7 +122,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'http://logout.test/frontchannel' must use HTTPS.");
+        AssertSingleError<UriMustUseHttpsError>(result.Errors, "invalid_client_metadata: FrontChannelLogoutUri 'http://logout.test/frontchannel' must use HTTPS.");
     }
 
     [Fact]
@@ -135,7 +137,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: FrontChannelLogoutUri 'https://logout.test/frontchannel#fragment' must not contain a fragment.");
+        AssertSingleError<UriMustNotContainFragmentError>(result.Errors, "invalid_client_metadata: FrontChannelLogoutUri 'https://logout.test/frontchannel#fragment' must not contain a fragment.");
     }
 
     [Fact]
@@ -151,7 +153,38 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: jwks must not be provided when jwks_uri is specified.");
+        AssertSingleError<JsonWebKeySetDisallowedError>(result.Errors, "invalid_client_metadata: jwks must not be provided when jwks_uri is specified.");
+    }
+    
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_token_endpoint_auth_is_private_key_and_jwks_is_missing_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.TokenEndpointAuthMethod = "private_key_jwt";
+            r.JsonWebKeySet = null;
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        //AssertSingleError<JsonWebKeySetRequiredError>(result.Errors, "invalid_client_metadata: jwks must be provided when token_endpoint_auth_method is 'private_key_jwt'.");
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_when_jwks_and_token_endpoint_auth_not_private_key_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.JsonWebKeySet = JsonDocument.Parse("""{"keys":[{"kty":"RSA"}]}""").RootElement.Clone();
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        AssertSingleError<JsonWebKeySetDisallowedError>(result.Errors, "invalid_client_metadata: jwks must not be provided when token_endpoint_auth_method is not 'private_key_jwt'.");
     }
 
     [Fact]
@@ -166,7 +199,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: InitiateLoginUri 'http://client.test/login' must use HTTPS.");
+        AssertSingleError<UriMustUseHttpsError>(result.Errors, "invalid_client_metadata: InitiateLoginUri 'http://client.test/login' must use HTTPS.");
     }
 
     [Fact]
@@ -181,7 +214,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: SectorIdentifierUri 'not-a-uri' must be an absolute URI.");
+        AssertSingleError<UriMustBeAbsoluteError>(result.Errors, "invalid_client_metadata: SectorIdentifierUri 'not-a-uri' must be an absolute URI.");
     }
 
     [Fact]
@@ -197,7 +230,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: backchannel_logout_uri must be provided when backchannel_logout_session_required is enabled.");
+        AssertSingleError<BackChannelLogoutUriRequiredError>(result.Errors, "invalid_client_metadata: backchannel_logout_uri must be provided when backchannel_logout_session_required is enabled.");
     }
 
     [Fact]
@@ -212,7 +245,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: BackChannelLogoutUri 'http://logout.test/backchannel' must use HTTPS.");
+        AssertSingleError<UriMustUseHttpsError>(result.Errors, "invalid_client_metadata: BackChannelLogoutUri 'http://logout.test/backchannel' must use HTTPS.");
     }
 
     [Fact]
@@ -227,7 +260,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: BackChannelLogoutUri 'https://logout.test/backchannel#fragment' must not contain a fragment.");
+        AssertSingleError<UriMustNotContainFragmentError>(result.Errors, "invalid_client_metadata: BackChannelLogoutUri 'https://logout.test/backchannel#fragment' must not contain a fragment.");
     }
     
     [Fact]
@@ -242,7 +275,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: PostLogoutRedirectUri 'http://client.test/postlogout' must use HTTPS.");
+        AssertSingleError<UriMustUseHttpsError>(result.Errors, "invalid_client_metadata: PostLogoutRedirectUri 'http://client.test/postlogout' must use HTTPS.");
     }
 
     [Fact]
@@ -257,7 +290,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_client_metadata: default_max_age must be a non-negative integer.");
+        AssertSingleError<DefaultMaxAgeInvalidError>(result.Errors, "invalid_client_metadata: default_max_age must be a non-negative integer.");
     }
 
     [Fact]
@@ -270,7 +303,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_software_statement: software_statement is required.");
+        AssertSingleError<SoftwareStatementRequiredError>(result.Errors, "invalid_software_statement: software_statement is required.");
     }
     
     [Theory]
@@ -285,7 +318,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain($"invalid_client_metadata: Unsupported metadata field: {expectedMetadata}");
+        AssertSingleError<UnsupportedMetadataFieldError>(result.Errors, $"invalid_client_metadata: Unsupported metadata field: {expectedMetadata}");
     }
 
     [Fact]
@@ -348,12 +381,12 @@ public class DefaultDynamicClientManagementValidatorTests
 
         Mock.Get(_softwareStatementValidator)
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
-            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "software_statement signature validation failed."));
+            .ReturnsAsync(new SoftwareStatementValidationResult(token, new SoftwareStatementInvalidSignatureError()));
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_software_statement: software_statement signature validation failed.");
+        AssertSingleError<SoftwareStatementInvalidSignatureError>(result.Errors, "invalid_software_statement: Software Statement signature is invalid.");
     }
 
     [Fact]
@@ -363,7 +396,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var token = new JwtSecurityToken();
         Mock.Get(_softwareStatementValidator)
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
-            .ReturnsAsync(new SoftwareStatementValidationResult(token, "invalid_software_statement", "software_statement issuer is missing."));
+            .ReturnsAsync(new SoftwareStatementValidationResult(token, new SoftwareStatementIssuerRequiredError()));
 
         var parseResult = CreateParseResult(new RegisterRequest
         {
@@ -374,7 +407,7 @@ public class DefaultDynamicClientManagementValidatorTests
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.Errors.Should().Contain("invalid_software_statement: software_statement issuer is missing.");
+        AssertSingleError<SoftwareStatementIssuerRequiredError>(result.Errors, "invalid_software_statement: Issuer is required.");
     }
     
     
@@ -514,5 +547,13 @@ public class DefaultDynamicClientManagementValidatorTests
         configure?.Invoke(request);
         
         return request;
+    }
+
+    private static void AssertSingleError<TError>(
+        ValidationError[] errors,
+        string expectedMessage)
+        where TError : ValidationError
+    {
+        errors.Any(error => error is TError && error.ToMessage() == expectedMessage).Should().BeTrue();
     }
 }

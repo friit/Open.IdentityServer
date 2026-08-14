@@ -19,6 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;
+using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 using Xunit;
 
 namespace Open.IdentityServer.DynamicClientManagement.UnitTests.Validation.Default;
@@ -67,6 +68,7 @@ public class DefaultSoftwareStatementValidatorTests
         var result = await _subject.ValidateAsync(token, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
+        result.Error.Should().BeOfType<SoftwareStatementIssuerRequiredError>();
     }
 
     [Fact]
@@ -78,6 +80,7 @@ public class DefaultSoftwareStatementValidatorTests
         var result = await _subject.ValidateAsync(token, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
+        result.Error.Should().BeOfType<SoftwareStatementNoSigningKeysFoundError>();
     }
 
     [Fact]
@@ -90,6 +93,7 @@ public class DefaultSoftwareStatementValidatorTests
         var result = await _subject.ValidateAsync(token, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
+        result.Error.Should().BeOfType<SoftwareStatementInvalidSignatureError>();
     }
 
     [Fact]
@@ -101,6 +105,7 @@ public class DefaultSoftwareStatementValidatorTests
         var result = await _subject.ValidateAsync(token, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
+        result.Error.Should().BeOfType<SoftwareStatementInvalidSignatureError>();
     }
 
     [Fact]
@@ -116,6 +121,7 @@ public class DefaultSoftwareStatementValidatorTests
         var result = await _subject.ValidateAsync(token, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
+        result.Error.Should().BeOfType<SoftwareStatementExpiredError>();
     }
 
     [Fact]

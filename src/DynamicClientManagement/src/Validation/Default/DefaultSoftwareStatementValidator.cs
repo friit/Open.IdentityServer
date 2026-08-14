@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
+using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 
 namespace Open.IdentityServer.DynamicClientManagement.Validation.Default;
 
@@ -51,8 +52,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
             _logger.LogError("Software Statement Issuer is required.");
             return new SoftwareStatementValidationResult(
                 softwareStatement,
-                Constants.RegisterErrors.InvalidSoftwareStatement, 
-                "Issuer is required."
+                new SoftwareStatementIssuerRequiredError()
             );
         }
         
@@ -74,8 +74,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "No signing keys found for issuer: " + softwareStatement.Issuer
+                    new SoftwareStatementNoSigningKeysFoundError(softwareStatement.Issuer)
                 );
             }
 
@@ -104,8 +103,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 _logger.LogError("Software Statement has expired.");
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "Software Statement has expired."
+                    new SoftwareStatementExpiredError()
                 );
             }
             catch (SecurityTokenInvalidIssuerException)
@@ -113,8 +111,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 _logger.LogError("Software Statement issuer is invalid.");
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "Software Statement issuer is invalid."
+                    new SoftwareStatementInvalidIssuerError()
                 );
             }
             catch (SecurityTokenInvalidLifetimeException)
@@ -122,8 +119,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 _logger.LogError("Software Statement lifetime is invalid.");
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "Software Statement lifetime is invalid."
+                    new SoftwareStatementInvalidLifetimeError()
                 );
             }
             catch (SecurityTokenInvalidSignatureException) when (!forceJwksRefresh && hasJwksUri)
@@ -137,8 +133,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 _logger.LogError("Software Statement signature is invalid.");
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    "Software Statement signature is invalid."
+                    new SoftwareStatementInvalidSignatureError()
                 );
             }
             catch (Exception exception)
@@ -146,8 +141,7 @@ public class DefaultSoftwareStatementValidator : ISoftwareStatementValidator
                 _logger.LogError("Invalid Software Statement: {message}", exception.Message);
                 return new SoftwareStatementValidationResult(
                     softwareStatement,
-                    Constants.RegisterErrors.InvalidSoftwareStatement,
-                    $"Invalid Software Statement: {exception.Message}");
+                    new SoftwareStatementInvalidError(exception.Message));
             }
 
             break;

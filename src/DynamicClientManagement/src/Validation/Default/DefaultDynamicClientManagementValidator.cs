@@ -8,6 +8,7 @@ using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Models.Results;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
+using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 
 namespace Open.IdentityServer.DynamicClientManagement.Validation.Default;
 
@@ -50,7 +51,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         ValidateUnsupportedMetadata(parseResult.Request, validationResult);
         ValidateGrantTypes(parseResult.Request, validationResult);
         ValidateRedirectUris(parseResult.Request, validationResult);
-        ValidateJsonWebKeySetUri(parseResult.Request, validationResult);
+        ValidateJsonWebKey(parseResult.Request, validationResult);
         ValidateInitiateLoginUri(parseResult.Request, validationResult);
         ValidateSectorIdentifierUri(parseResult.Request, validationResult);
         ValidatePostLogoutRedirectUris(parseResult.Request, validationResult);
@@ -63,7 +64,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         if (validationResult.IsError)
         {
             _logger.LogError("Dynamic Client Management Request validation failed with errors: {errors}",
-                string.Join(",\n ", validationResult.Errors)
+                string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage()))
             );
         }
 
@@ -74,9 +75,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         foreach (var unsupportedMetadataField in GetUnsupportedMetadata(request))
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.UnsupportedMetadataField(unsupportedMetadataField));
+            validationResult.AddError(new UnsupportedMetadataFieldError(unsupportedMetadataField));
         }
     }
 
@@ -84,9 +83,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (request.GrantTypes == null || !request.GrantTypes.Any())
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.GrantTypesRequired);
+            validationResult.AddError(new GrantTypesRequiredError());
         }
     }
 
@@ -94,9 +91,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (request.RedirectUris == null || !request.RedirectUris.Any())
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.RedirectUrisRequired);
+            validationResult.AddError(new RedirectUrisRequiredError());
             return;
         }
         
@@ -119,21 +114,23 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         }
     }
 
-    private void ValidateJsonWebKeySetUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateJsonWebKey(RegisterRequest request, RegistrationRequestValidationResult validationResult)
     {
-        if (string.IsNullOrWhiteSpace(request.JsonWebKeySetUri))
+        if (!string.IsNullOrWhiteSpace(request.JsonWebKeySetUri) && request.JsonWebKeySet is not null)
         {
+            validationResult.AddError(new JsonWebKeySetDisallowedError());
+            return;
+        }
+        
+        if(request.JsonWebKeySet is null && request.TokenEndpointAuthMethod == Constants.TokenEndpointAuthMethod.PrivateKeyJwt)
+        {
+            validationResult.AddError(new JsonWebKeySetRequiredError());
             return;
         }
 
         ValidateUri(request.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
 
-        if (request.JsonWebKeySet is not null)
-        {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.JsonWebKeySetDisallowed);
-        }
+        
     }
 
     private void ValidateInitiateLoginUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
@@ -160,9 +157,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (request.FrontChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.FrontChannelLogoutUri))
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.FrontChannelLogoutUriRequired);
+            validationResult.AddError(new FrontChannelLogoutUriRequiredError());
             return;
         }
 
@@ -178,9 +173,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (request.BackChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.BackChannelLogoutUri))
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.BackChannelLogoutUriRequired);
+            validationResult.AddError(new BackChannelLogoutUriRequiredError());
             return;
         }
 
@@ -196,9 +189,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (request.DefaultMaxAge is < 0)
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.DefaultMaxAgeInvalid);
+            validationResult.AddError(new DefaultMaxAgeInvalidError());
         }
     }
 
@@ -209,9 +200,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (_options.Value.RequireValidSoftwareStatement && parseResult.SoftwareStatement is null)
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidSoftwareStatement, 
-                Errors.SoftwareStatementRequired);
+            validationResult.AddError(new SoftwareStatementRequiredError());
             return;
         }
 
@@ -227,9 +216,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
 
         if (softwareStatementValidationResult.IsError)
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidSoftwareStatement,
-                softwareStatementValidationResult.ErrorDescription);
+            validationResult.AddError(softwareStatementValidationResult.Error!);
         }
     }
     
@@ -240,25 +227,19 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     {
         if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? result))
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.UriMustBeAbsolute(uriName, uri));
+            validationResult.AddError(new UriMustBeAbsoluteError(uriName, uri));
             return;
         }
 
         if (result.Scheme != Uri.UriSchemeHttps)
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.UriMustUseHttps(uriName, uri));
+            validationResult.AddError(new UriMustUseHttpsError(uriName, uri));
             return;
         }
 
         if (!string.IsNullOrEmpty(result.Fragment))
         {
-            validationResult.AddError(
-                Constants.RegisterErrors.InvalidClientMetadata,
-                Errors.UriMustNotContainFragment(uriName, uri));
+            validationResult.AddError(new UriMustNotContainFragmentError(uriName, uri));
         }
     }
     
@@ -287,27 +268,4 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
             .Select(r => r.Name)
             .ToList();
 
-    internal static class Errors
-    {
-        public static string UnsupportedMetadataField(string unsupportedMetadataField) 
-            => $"Unsupported metadata field: {unsupportedMetadataField}";
-        
-        public static string GrantTypesRequired = "grant_types must be provided.";
-        public static string RedirectUrisRequired = "redirect_uris must be provided.";
-
-        public static string JsonWebKeySetDisallowed =
-            "jwks must not be provided when jwks_uri is specified.";
-
-        public static string FrontChannelLogoutUriRequired =
-            "frontchannel_logout_session_required requires front_channel_logout_uri to be provided.";
-
-        public static string BackChannelLogoutUriRequired =
-            "backchannel_logout_uri must be provided when backchannel_logout_session_required is enabled.";
-        public static string DefaultMaxAgeInvalid = "default_max_age must be a non-negative integer.";
-        public static string SoftwareStatementRequired = "software_statement is required.";
-        public static string UriMustBeAbsolute(string uriName, string uri) => $"{uriName} '{uri}' must be an absolute URI.";
-        public static string UriMustUseHttps(string uriName, string uri) => $"{uriName} '{uri}' must use HTTPS.";
-        public static string UriMustNotContainFragment(string uriName, string uri) => $"{uriName} '{uri}' must not contain a fragment.";
-        
-    }
 }
