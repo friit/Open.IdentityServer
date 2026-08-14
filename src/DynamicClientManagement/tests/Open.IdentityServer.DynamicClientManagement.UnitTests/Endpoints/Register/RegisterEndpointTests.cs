@@ -235,7 +235,6 @@ public class RegisterEndpointTests
             Client = new Client(),
             ClientSecret = "secret",
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            EffectiveRequest = registerRequest,
             RegistrationAccessToken = "token",
             RegistrationClientUri = "uri"
         };
@@ -273,7 +272,6 @@ public class RegisterEndpointTests
             Client = new Client(),
             ClientSecret = "secret",
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            EffectiveRequest = registerRequest,
             RegistrationAccessToken = "token",
             RegistrationClientUri = "uri"
         };
@@ -312,7 +310,6 @@ public class RegisterEndpointTests
             Client = new Client(),
             ClientSecret = "secret",
             ClientIdIssuedAt = DateTime.UtcNow,
-            EffectiveRequest = registerRequest,
             RegistrationAccessToken = "token",
             RegistrationClientUri = "uri"   
         };

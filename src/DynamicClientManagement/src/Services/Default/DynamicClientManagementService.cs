@@ -104,8 +104,8 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             RegistrationAccessToken = Guid.NewGuid().ToString("N"),
             RegistrationClientUri = $"connect/register/{generatedClientId}",
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
+            //Todo: Implement proper expiration for client secrets if needed. For now, we set it to UnixEpoch if a secret is generated, otherwise null.
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
-            EffectiveRequest = request
         };
     }
 
