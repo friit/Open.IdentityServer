@@ -295,6 +295,28 @@ public class DefaultDynamicClientManagementValidatorTests
 
     [Fact]
     [Trait("Category", Category)]
+    public async Task validate_when_lifetime_is_zero_should_return_failure()
+    {
+        var registerRequest = CreateRegisterRequest(r =>
+        {
+            r.IdentityTokenLifetime = 0;
+            r.AccessTokenLifetime = 0;
+            r.AuthorizationCodeLifetime = 0;
+            r.AbsoluteRefreshTokenLifetime = 0;
+            r.SlidingRefreshTokenLifetime = 0;
+            r.ConsentLifetime = 0;
+            r.UserSsoLifetime = 0;
+            r.DeviceCodeLifetime = 0;
+        });
+
+        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.Errors.Count(error => error is LifetimeInvalidError).Should().Be(8);
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
     public async Task validate_when_software_statement_is_required_but_missing_should_return_failure()
     {
         _options.RequireValidSoftwareStatement = true;
@@ -343,7 +365,7 @@ public class DefaultDynamicClientManagementValidatorTests
 
     [Fact]
     [Trait("Category", Category)]
-    public async Task validate_when_software_statement_is_not_required_should_call_signature_validator()
+    public async Task validate_when_software_statement_is_not_required_but_present_should_call_signature_validator()
     {
         _options.RequireValidSoftwareStatement = false;
         var token = new JwtSecurityToken();
@@ -360,7 +382,6 @@ public class DefaultDynamicClientManagementValidatorTests
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
-        result.IsError.Should().BeFalse();
         Mock.Get(_softwareStatementValidator)
             .Verify(
                 x => x.ValidateAsync(It.IsAny<JwtSecurityToken>(), It.IsAny<CancellationToken>()),

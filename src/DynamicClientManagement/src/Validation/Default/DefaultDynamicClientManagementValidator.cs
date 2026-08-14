@@ -58,6 +58,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         ValidateFrontChannelLogoutUri(parseResult.Request, validationResult);
         ValidateBackChannelLogoutUri(parseResult.Request, validationResult);
         ValidateDefaultMaxAge(parseResult.Request, validationResult);
+        ValidateLifetimes(parseResult.Request, validationResult);
 
         await ValidateSoftwareStatementAsync(parseResult, validationResult, cancellationToken);
 
@@ -190,6 +191,29 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         if (request.DefaultMaxAge is < 0)
         {
             validationResult.AddError(new DefaultMaxAgeInvalidError());
+        }
+    }
+
+    private void ValidateLifetimes(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    {
+        var lifetimes = new[]
+        {
+            ("identity_token_lifetime", request.IdentityTokenLifetime),
+            ("access_token_lifetime", request.AccessTokenLifetime),
+            ("authorization_code_lifetime", request.AuthorizationCodeLifetime),
+            ("absolute_refresh_token_lifetime", request.AbsoluteRefreshTokenLifetime),
+            ("sliding_refresh_token_lifetime", request.SlidingRefreshTokenLifetime),
+            ("consent_lifetime", request.ConsentLifetime),
+            ("user_sso_lifetime", request.UserSsoLifetime),
+            ("device_code_lifetime", request.DeviceCodeLifetime)
+        };
+
+        foreach (var (name, value) in lifetimes)
+        {
+            if (value == 0)
+            {
+                validationResult.AddError(new LifetimeInvalidError(name));
+            }
         }
     }
 

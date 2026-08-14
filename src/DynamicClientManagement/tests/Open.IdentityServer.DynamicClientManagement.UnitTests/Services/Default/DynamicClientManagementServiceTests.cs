@@ -165,12 +165,85 @@ public class DynamicClientManagementServiceTests
             .WithMessage("jwks must be provided for token_endpoint_auth_method 'private_key_jwt'.");
     }
 
+    [Fact]
+    public async Task register_should_create_expected_client()
+    {
+        var request = CreateRegisterRequest();
+        request.TokenEndpointAuthMethod = "none";
+
+        var result = await _subject.RegisterAsync(request, TestContext.Current.CancellationToken);
+
+        result.Client.Should().BeEquivalentTo(
+            CreateClient(),
+            options => options.Excluding(client => client.ClientId));
+    }
+
     private static string HashSharedSecret(string sharedSecret)
     {
         var bytes = Encoding.UTF8.GetBytes(sharedSecret);
         var hash = SHA256.HashData(bytes);
 
         return Convert.ToBase64String(hash);
+    }
+
+    private static Client CreateClient()
+    {
+        return new Client
+        {
+            ClientName = "client_name",
+            ClientUri = "client_uri",
+            LogoUri = "logo_uri",
+            RedirectUris = ["https://redirect.test/callback"],
+            PostLogoutRedirectUris = ["post_logout_redirect_uri"],
+            AllowedGrantTypes = ["grant_type"],
+            AllowedScopes = ["scope1", "scope2"],
+            RequireClientSecret = false,
+            RequirePkce = false,
+            AllowOfflineAccess = false,
+            AllowAccessTokensViaBrowser = true,
+            FrontChannelLogoutUri = "front_channel_logout_uri",
+            FrontChannelLogoutSessionRequired = true,
+            BackChannelLogoutUri = "back_channel_logout_uri",
+            BackChannelLogoutSessionRequired = true,
+            UserSsoLifetime = 1,
+            InitiateLoginUri = "initiate_login_uri",
+            Enabled = false,
+            RequireConsent = true,
+            AllowRememberConsent = false,
+            RequireRequestObject = true,
+            AlwaysIncludeUserClaimsInIdToken = true,
+            IdentityTokenLifetime = 1,
+            AccessTokenLifetime = 1,
+            AuthorizationCodeLifetime = 1,
+            AbsoluteRefreshTokenLifetime = 1,
+            SlidingRefreshTokenLifetime = 1,
+            ConsentLifetime = 1,
+            RefreshTokenUsage = TokenUsage.OneTimeOnly,
+            UpdateAccessTokenClaimsOnRefresh = true,
+            RefreshTokenExpiration = TokenExpiration.Absolute,
+            AccessTokenType = AccessTokenType.Jwt,
+            EnableLocalLogin = false,
+            IdentityProviderRestrictions = ["idp1", "idp2"],
+            IncludeJwtId = true,
+            Claims =
+            [
+                new ClientClaim("claim1", "value1"),
+                new ClientClaim("claim2", "123")
+            ],
+            ClientClaimsPrefix = "prefix",
+            PairWiseSubjectSalt = "pairwise_subject_salt",
+            UserCodeType = "user_code_type",
+            DeviceCodeLifetime = 1,
+            AllowedCorsOrigins = ["https://cors.test"],
+            Properties = new Dictionary<string, string>
+            {
+                ["contacts"] = JsonSerializer.Serialize(new[] { "contact" }),
+                ["terms_of_service_uri"] = "https://client.test/tos",
+                ["policy_uri"] = "policy_uri",
+                ["software_id"] = "software_id",
+                ["software_version"] = "software_version"
+            }
+        };
     }
     
     private static RegisterRequest CreateRegisterRequest() 
@@ -216,7 +289,54 @@ public class DynamicClientManagementServiceTests
             RequestObjectEncryption = "request_object_encryption_enc",
             TokenEndpointAuthSigningAlgorithm = "token_endpoint_auth_signing_alg",
             SoftwareStatement = "software_statement",
-                
+            AllowAccessTokensViaBrowser = true,
+            Enabled = false,
+            RequireConsent = true,
+            AllowRememberConsent = false,
+            RequirePkce = false,
+            RequireRequestObject = true,
+            AlwaysIncludeUserClaimsInIdToken = true,
+            IdentityTokenLifetime = 1,
+            AccessTokenLifetime = 1,
+            AuthorizationCodeLifetime = 1,
+            AbsoluteRefreshTokenLifetime = 1,
+            SlidingRefreshTokenLifetime = 1,
+            ConsentLifetime = 1,
+            RefreshTokenUsage = "one_time_only",
+            UpdateAccessTokenClaimsOnRefresh = true,
+            RefreshTokenExpiration = "absolute",
+            AccessTokenType = "jwt",
+            EnableLocalLogin = false,
+            IdentityProviderRestrictions = ["idp1", "idp2"],
+            ClientClaims = new Dictionary<string, JsonElement>
+            {
+                { "claim1", JsonDocument.Parse("\"value1\"").RootElement.Clone() },
+                { "claim2", JsonDocument.Parse("123").RootElement.Clone() }
+            },
+            ClientClaimsPrefix = "prefix",
+            PairwiseSubjectSalt = "pairwise_subject_salt",
+            UserSsoLifetime = 1,
+            DeviceCodeLifetime = 1,
+            UserCodeType = "user_code_type",
+            AllowedCorsOrigins = ["https://cors.test"],
+            JsonWebKeySet = JsonDocument.Parse("""
+            {
+              "keys": [
+                {
+                  "kty": "RSA",
+                  "kid": "key1",
+                  "use": "sig",
+                  "n": "abc",
+                  "e": "AQAB"
+                }
+              ]
+            }
+            """).RootElement.Clone(),
+            JsonWebKeySetUri = "https://client.test/jwks",
+            IncludeJwtId = true,
+            TermsOfServiceUri = "https://client.test/tos",
+            UserInfoEncryptedResponseAlgorithm = "userinfo_encrypted_response_alg",
+
         };
     }
 }

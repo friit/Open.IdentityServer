@@ -34,10 +34,13 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         // Defaults to client_secret_basic if not specified according to the spec.
         var tokenEndpointAuthMethod = request.TokenEndpointAuthMethod ?? "client_secret_basic";
 
+        // Generate client id and secret.
         var generatedClientId = GenerateClientId();
         var generatedClientSecret = GenerateClientSecret(tokenEndpointAuthMethod);
-        
+
+        // Defaults to authorization_code if not specified according to the spec.
         var grantTypes = request.GrantTypes ?? ["authorization_code"];
+
         var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         
         var client = new Client()
@@ -54,15 +57,14 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             RequireClientSecret = tokenEndpointAuthMethod != "none",
             RequirePkce = grantTypes.Contains("authorization_code"),
             AllowOfflineAccess = scopes?.Contains("offline_access") == true || grantTypes.Contains("refresh_token"),
-            AllowAccessTokensViaBrowser = grantTypes.Contains("implicit"),
             FrontChannelLogoutUri = request.FrontChannelLogoutUri,
-            FrontChannelLogoutSessionRequired = request.FrontChannelLogoutSessionRequired ?? true,
             BackChannelLogoutUri = request.BackChannelLogoutUri,
-            BackChannelLogoutSessionRequired = request.BackChannelLogoutSessionRequired ?? true,
-            UserSsoLifetime = request.DefaultMaxAge,
+            UserSsoLifetime = request.UserSsoLifetime ?? request.DefaultMaxAge,
             InitiateLoginUri = request.InitiateLoginUri,
         };
-        
+
+        ApplyOpenIdentityServerParameters(request, client);
+
         if(request.Contacts != null)
         {
             client.Properties["contacts"] = JsonSerializer.Serialize(request.Contacts);
@@ -106,6 +108,181 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             EffectiveRequest = request
         };
     }
+
+    private static void ApplyOpenIdentityServerParameters(RegisterRequest request, Client client)
+    {
+        if (request.Enabled.HasValue)
+        {
+            client.Enabled = request.Enabled.Value;
+        }
+
+        if (request.RequireConsent.HasValue)
+        {
+            client.RequireConsent = request.RequireConsent.Value;
+        }
+
+        if (request.AllowRememberConsent.HasValue)
+        {
+            client.AllowRememberConsent = request.AllowRememberConsent.Value;
+        }
+
+        if (request.RequirePkce.HasValue)
+        {
+            client.RequirePkce = request.RequirePkce.Value;
+        }
+
+        if (request.RequireRequestObject.HasValue)
+        {
+            client.RequireRequestObject = request.RequireRequestObject.Value;
+        }
+
+        if (request.AlwaysIncludeUserClaimsInIdToken.HasValue)
+        {
+            client.AlwaysIncludeUserClaimsInIdToken = request.AlwaysIncludeUserClaimsInIdToken.Value;
+        }
+
+        if (request.IdentityTokenLifetime.HasValue)
+        {
+            client.IdentityTokenLifetime = request.IdentityTokenLifetime.Value;
+        }
+
+        if (request.AccessTokenLifetime.HasValue)
+        {
+            client.AccessTokenLifetime = request.AccessTokenLifetime.Value;
+        }
+
+        if (request.AuthorizationCodeLifetime.HasValue)
+        {
+            client.AuthorizationCodeLifetime = request.AuthorizationCodeLifetime.Value;
+        }
+
+        if (request.AbsoluteRefreshTokenLifetime.HasValue)
+        {
+            client.AbsoluteRefreshTokenLifetime = request.AbsoluteRefreshTokenLifetime.Value;
+        }
+
+        if (request.SlidingRefreshTokenLifetime.HasValue)
+        {
+            client.SlidingRefreshTokenLifetime = request.SlidingRefreshTokenLifetime.Value;
+        }
+
+        if (request.ConsentLifetime.HasValue)
+        {
+            client.ConsentLifetime = request.ConsentLifetime.Value;
+        }
+
+        if (request.RefreshTokenUsage is not null)
+        {
+            client.RefreshTokenUsage = ParseEnum<TokenUsage>(
+                request.RefreshTokenUsage,
+                nameof(request.RefreshTokenUsage));
+        }
+
+        if (request.UpdateAccessTokenClaimsOnRefresh.HasValue)
+        {
+            client.UpdateAccessTokenClaimsOnRefresh = request.UpdateAccessTokenClaimsOnRefresh.Value;
+        }
+
+        if (request.RefreshTokenExpiration is not null)
+        {
+            client.RefreshTokenExpiration = ParseEnum<TokenExpiration>(
+                request.RefreshTokenExpiration,
+                nameof(request.RefreshTokenExpiration));
+        }
+
+        if (request.AccessTokenType is not null)
+        {
+            client.AccessTokenType = ParseEnum<AccessTokenType>(
+                request.AccessTokenType,
+                nameof(request.AccessTokenType));
+        }
+
+        if (request.EnableLocalLogin.HasValue)
+        {
+            client.EnableLocalLogin = request.EnableLocalLogin.Value;
+        }
+
+        if (request.IdentityProviderRestrictions is not null)
+        {
+            client.IdentityProviderRestrictions = request.IdentityProviderRestrictions;
+        }
+
+        if (request.IncludeJwtId.HasValue)
+        {
+            client.IncludeJwtId = request.IncludeJwtId.Value;
+        }
+
+        if (request.ClientClaims is not null)
+        {
+            client.Claims = request.ClientClaims
+                .Select(claim => new ClientClaim(claim.Key, claim.Value.ToString()))
+                .ToList();
+        }
+
+        if (request.ClientClaimsPrefix is not null)
+        {
+            client.ClientClaimsPrefix = request.ClientClaimsPrefix;
+        }
+
+        if (request.PairwiseSubjectSalt is not null)
+        {
+            client.PairWiseSubjectSalt = request.PairwiseSubjectSalt;
+        }
+
+        if (request.UserSsoLifetime.HasValue)
+        {
+            client.UserSsoLifetime = request.UserSsoLifetime.Value;
+        }
+
+        if (request.UserCodeType is not null)
+        {
+            client.UserCodeType = request.UserCodeType;
+        }
+
+        if (request.DeviceCodeLifetime.HasValue)
+        {
+            client.DeviceCodeLifetime = request.DeviceCodeLifetime.Value;
+        }
+
+        if (request.AllowedCorsOrigins is not null)
+        {
+            client.AllowedCorsOrigins = request.AllowedCorsOrigins;
+        }
+
+        if (request.FrontChannelLogoutSessionRequired.HasValue)
+        {
+            client.FrontChannelLogoutSessionRequired = request.FrontChannelLogoutSessionRequired.Value;
+        }
+
+        if (request.BackChannelLogoutSessionRequired.HasValue)
+        {
+            client.BackChannelLogoutSessionRequired = request.BackChannelLogoutSessionRequired.Value;
+        }
+
+        if (request.AllowAccessTokensViaBrowser.HasValue)
+        {
+            client.AllowAccessTokensViaBrowser = request.AllowAccessTokensViaBrowser.Value;
+        }
+
+    }
+
+    private static TEnum ParseEnum<TEnum>(string value, string propertyName)
+        where TEnum : struct, Enum
+    {
+        if (Enum.TryParse(value, ignoreCase: true, out TEnum parsed) ||
+            Enum.TryParse(
+                value.Replace("_", string.Empty, StringComparison.Ordinal)
+                    .Replace("-", string.Empty, StringComparison.Ordinal),
+                ignoreCase: true,
+                out parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidDynamicClientManagementRequestException(
+            Constants.RegisterErrors.InvalidClientMetadata,
+            $"{propertyName} '{value}' is not a valid {typeof(TEnum).Name} value.");
+    }
     
     protected virtual string GenerateClientId()
     {
@@ -118,6 +295,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         return tokenEndpointAuthMethod switch{
             "none" => null,
             "client_secret_basic" or "client_secret_post" => Guid.NewGuid().ToString(),
+            "private_key_jwt" => null,
             _ => throw new InvalidDynamicClientManagementRequestException(
                 Constants.RegisterErrors.InvalidClientMetadata,
                 $"token_endpoint_auth_method '{tokenEndpointAuthMethod}' is not supported.")

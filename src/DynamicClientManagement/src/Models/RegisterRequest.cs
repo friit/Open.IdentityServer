@@ -388,13 +388,129 @@ public class RegisterRequest
     [JsonPropertyName("backchannel_logout_session_required")]
     public bool? BackChannelLogoutSessionRequired { get; set; }
 
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.PostLogoutRedirectUris" />
     [JsonPropertyName("post_logout_redirect_uris")]
     public string[]? PostLogoutRedirectUris { get; set; }
 
 
     // RFC 7591 extension metadata / vendor-specific parameters
-
+    /// <summary>
+    /// Additional metadata fields that are not represented by a defined property.
+    /// </summary>
+    /// <remarks>
+    /// The values are preserved from JSON properties that are not otherwise mapped to this request.
+    /// Not processed by the <seealso cref="DynamicClientManagementService"/> but may be used by extensions.
+    /// </remarks>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? AdditionalMetadata { get; set; }
-    
+
+    // OpenIdentityServer specific parameters
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.Enabled" />
+    [JsonPropertyName("enabled")]
+    public bool? Enabled { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.RequireConsent" />
+    [JsonPropertyName("require_consent")]
+    public bool? RequireConsent { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AllowRememberConsent" />
+    [JsonPropertyName("allow_remember_consent")]
+    public bool? AllowRememberConsent { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.RequirePkce" />
+    [JsonPropertyName("require_pkce")]
+    public bool? RequirePkce { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.RequireRequestObject" />
+    [JsonPropertyName("require_request_object")]
+    public bool? RequireRequestObject { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AlwaysIncludeUserClaimsInIdToken" />
+    [JsonPropertyName("always_include_user_claims_in_id_token")]
+    public bool? AlwaysIncludeUserClaimsInIdToken { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.IdentityTokenLifetime" />
+    [JsonPropertyName("identity_token_lifetime")]
+    public int? IdentityTokenLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AccessTokenLifetime" />
+    [JsonPropertyName("access_token_lifetime")]
+    public int? AccessTokenLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AuthorizationCodeLifetime" />
+    [JsonPropertyName("authorization_code_lifetime")]
+    public int? AuthorizationCodeLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AbsoluteRefreshTokenLifetime" />
+    [JsonPropertyName("absolute_refresh_token_lifetime")]
+    public int? AbsoluteRefreshTokenLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.SlidingRefreshTokenLifetime" />
+    [JsonPropertyName("sliding_refresh_token_lifetime")]
+    public int? SlidingRefreshTokenLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.ConsentLifetime" />
+    [JsonPropertyName("consent_lifetime")]
+    public int? ConsentLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.RefreshTokenUsage" />
+    [JsonPropertyName("refresh_token_usage")]
+    public string? RefreshTokenUsage { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.UpdateAccessTokenClaimsOnRefresh" />
+    [JsonPropertyName("update_access_token_claims_on_refresh")]
+    public bool? UpdateAccessTokenClaimsOnRefresh { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.RefreshTokenExpiration" />
+    [JsonPropertyName("refresh_token_expiration")]
+    public string? RefreshTokenExpiration { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AccessTokenType" />
+    [JsonPropertyName("access_token_type")]
+    public string? AccessTokenType { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.EnableLocalLogin" />
+    [JsonPropertyName("enable_local_login")]
+    public bool? EnableLocalLogin { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.IdentityProviderRestrictions" />
+    [JsonPropertyName("identity_provider_restrictions")]
+    public string[]? IdentityProviderRestrictions { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.IncludeJwtId" />
+    [JsonPropertyName("include_jwt_id")]
+    public bool? IncludeJwtId { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.Claims" />
+    [JsonPropertyName("client_claims")]
+    public Dictionary<string, JsonElement>? ClientClaims { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.ClientClaimsPrefix" />
+    [JsonPropertyName("client_claims_prefix")]
+    public string? ClientClaimsPrefix { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.PairWiseSubjectSalt" />
+    [JsonPropertyName("pairwise_subject_salt")]
+    public string? PairwiseSubjectSalt { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.UserSsoLifetime" />
+    [JsonPropertyName("user_sso_lifetime")]
+    public int? UserSsoLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.UserCodeType" />
+    [JsonPropertyName("user_code_type")]
+    public string? UserCodeType { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.DeviceCodeLifetime" />
+    [JsonPropertyName("device_code_lifetime")]
+    public int? DeviceCodeLifetime { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AllowedCorsOrigins" />
+    [JsonPropertyName("allowed_cors_origins")]
+    public string[]? AllowedCorsOrigins { get; set; }
+
+    /// <inheritdoc cref="Open.IdentityServer.Models.Client.AllowAccessTokensViaBrowser" />
+    [JsonPropertyName("allow_access_tokens_via_browser")]
+    public bool? AllowAccessTokensViaBrowser { get; set; }
 }
