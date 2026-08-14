@@ -176,6 +176,7 @@ public class DynamicClientManagementServiceTests
         result.Client.Should().BeEquivalentTo(
             CreateClient(),
             options => options.Excluding(client => client.ClientId));
+        result.OriginalRequest.Should().Be(request);
     }
 
     private static string HashSharedSecret(string sharedSecret)

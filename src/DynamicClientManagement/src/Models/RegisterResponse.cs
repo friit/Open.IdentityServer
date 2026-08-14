@@ -9,7 +9,7 @@ namespace Open.IdentityServer.DynamicClientManagement.Models;
 /// <summary>
 /// Response from the Dynamic Client Management endpoint
 /// </summary>
-public class RegisterResponse
+public record RegisterResponse
 {
     // RFC 7591
     /// <summary>

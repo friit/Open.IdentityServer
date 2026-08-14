@@ -106,6 +106,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
             //Todo: Implement proper expiration for client secrets if needed. For now, we set it to UnixEpoch if a secret is generated, otherwise null.
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
+            OriginalRequest = request
         };
     }
 
