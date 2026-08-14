@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
@@ -90,7 +91,14 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             client.Properties["software_version"] = request.SoftwareVersion;
         }
 
+        var token = GenerateToken(client, request);
+        
+        //TODO: review this, should we store the token in the client properties? or should we store it in a separate store?
+        // Should this also store actual data?
+        client.Properties["dcm_token_hash"] = token.hash;
+        
         await _clientStore.RegisterClientAsync(client, cancellationToken);
+        
 
         _logger.LogDebug(
             "Registered dynamic client {clientId} using token endpoint auth method {tokenEndpointAuthMethod}.",
@@ -101,13 +109,22 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         {
             Client = client,
             ClientSecret = generatedClientSecret,
-            RegistrationAccessToken = Guid.NewGuid().ToString("N"),
+            RegistrationAccessToken = token.raw,
             RegistrationClientUri = $"connect/register/{generatedClientId}",
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
             //Todo: Implement proper expiration for client secrets if needed. For now, we set it to UnixEpoch if a secret is generated, otherwise null.
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
-            OriginalRequest = request
+            OriginalRequest = request,
         };
+    }
+
+    protected virtual (string raw, string hash) GenerateToken(Client client, RegisterRequest request)
+    {
+        var tokenBytes = RandomNumberGenerator.GetBytes(32);
+        var token = WebEncoders.Base64UrlEncode(tokenBytes);
+        var tokenHash = Convert.ToBase64String(SHA256.HashData(tokenBytes));
+        
+        return (token, tokenHash);
     }
 
     private static void ApplyOpenIdentityServerParameters(RegisterRequest request, Client client)

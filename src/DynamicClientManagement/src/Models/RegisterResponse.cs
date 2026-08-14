@@ -91,11 +91,11 @@ public record RegisterResponse
     public string RegistrationClientUri { get; init; }
 
     // Extension data
-    
+
     /// <summary>
     /// Holds additional data not explicitly defined in the response, enabling extensibility for custom properties.
     /// This property is populated with JSON extension data found during deserialization.
     /// </summary>x
     [JsonExtensionData]
-    public Dictionary<string, JsonElement>? AdditionalData { get; init; }
+    public Dictionary<string, JsonElement> AdditionalData { get; init; } = new();
 }

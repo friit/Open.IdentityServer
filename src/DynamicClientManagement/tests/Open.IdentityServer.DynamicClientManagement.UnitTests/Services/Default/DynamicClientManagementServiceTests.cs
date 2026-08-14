@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
@@ -172,10 +173,22 @@ public class DynamicClientManagementServiceTests
         request.TokenEndpointAuthMethod = "none";
 
         var result = await _subject.RegisterAsync(request, TestContext.Current.CancellationToken);
+        result.RegistrationAccessToken.Should().NotBeNullOrWhiteSpace();
 
+        var registrationAccessToken = result.RegistrationAccessToken!;
+        var tokenBytes = WebEncoders.Base64UrlDecode(registrationAccessToken);
+        var expectedTokenHash = Convert.ToBase64String(SHA256.HashData(tokenBytes));
+        
         result.Client.Should().BeEquivalentTo(
             CreateClient(),
-            options => options.Excluding(client => client.ClientId));
+            options => options
+                .Excluding(client => client.ClientId)
+                .Excluding(client => client.ClientSecrets)
+                .Excluding(client => client.Properties)
+            );
+        
+        result.Client.Properties["dcm_token_hash"].Should().Be(expectedTokenHash);
+        result.Client.Properties["dcm_token_hash"].Should().NotBe(registrationAccessToken);
         result.OriginalRequest.Should().Be(request);
     }
 
@@ -189,6 +202,15 @@ public class DynamicClientManagementServiceTests
 
     private static Client CreateClient()
     {
+        var properties = new Dictionary<string, string>
+        {
+            ["contacts"] = JsonSerializer.Serialize(new[] { "contact" }),
+            ["terms_of_service_uri"] = "https://client.test/tos",
+            ["policy_uri"] = "policy_uri",
+            ["software_id"] = "software_id",
+            ["software_version"] = "software_version"
+        };
+
         return new Client
         {
             ClientName = "client_name",
@@ -236,14 +258,7 @@ public class DynamicClientManagementServiceTests
             UserCodeType = "user_code_type",
             DeviceCodeLifetime = 1,
             AllowedCorsOrigins = ["https://cors.test"],
-            Properties = new Dictionary<string, string>
-            {
-                ["contacts"] = JsonSerializer.Serialize(new[] { "contact" }),
-                ["terms_of_service_uri"] = "https://client.test/tos",
-                ["policy_uri"] = "policy_uri",
-                ["software_id"] = "software_id",
-                ["software_version"] = "software_version"
-            }
+            Properties = properties
         };
     }
     

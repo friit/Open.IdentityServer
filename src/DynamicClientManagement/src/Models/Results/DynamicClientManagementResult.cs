@@ -13,4 +13,5 @@ public sealed record DynamicClientManagementResult
     public DateTimeOffset? ClientSecretExpiresAt { get; init; }
     public string? RegistrationAccessToken { get; init; }
     public string? RegistrationClientUri { get; init; }
+    public RegisterRequest OriginalRequest { get; init; }
 }
