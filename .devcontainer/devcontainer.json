@@ -1,0 +1,14 @@
+{
+  "name": ".NET 10 + Helix + Roslyn",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "runArgs": [
+    "--init"
+  ],
+  "postCreateCommand": "find . -type d -name 'bin' -exec rm -rf {} + 2>/dev/null || true; find . -type d -name 'obj' -exec rm -rf {} + 2>/dev/null || true && dotnet restore && dotnet build"
+}
