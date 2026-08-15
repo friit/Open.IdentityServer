@@ -350,6 +350,7 @@ public class RegisterEndpointTests
         response.Should().BeEquivalentTo(
             registerResponse,
             options => options.Excluding(x => x.AdditionalData));
+        
         response.AdditionalData.Should().ContainKey("custom_metadata");
         response.AdditionalData["custom_metadata"]
             .GetProperty("custom_metadata_value")

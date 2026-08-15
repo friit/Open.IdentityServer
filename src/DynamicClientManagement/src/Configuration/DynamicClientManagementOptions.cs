@@ -8,6 +8,9 @@ namespace Open.IdentityServer.DynamicClientManagement.Configuration;
 
 public class DynamicClientManagementOptions
 {
+    
+    public string RegisterPath { get; set; } = "/connect/register";
+    
     /// <summary>
     /// If true, the software statement must contain a valid JWT.
     /// </summary>
@@ -25,6 +28,7 @@ public class DynamicClientManagementOptions
     public SoftwareStatementSignatureValidationOptions SoftwareStatementSignatureValidationOptions { get; } = new();
 
     public JsonSerializerOptions? ParserJsonSerializerOptions { get; set; }
+    
 }
 
 public class SoftwareStatementSignatureValidationOptions

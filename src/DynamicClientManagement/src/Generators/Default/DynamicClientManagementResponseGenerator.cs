@@ -15,14 +15,16 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         {
             ClientId = registrationResult.Client.ClientId,
             ClientSecret = registrationResult.ClientSecret,
-            ClientIdIssuedAt = registrationResult.ClientIdIssuedAt.Ticks,
+            ClientIdIssuedAt = registrationResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
+            ClientSecretExpiresAt = registrationResult.ClientSecretExpiresAt?.ToUnixTimeSeconds(),
             RegistrationAccessToken = registrationResult.RegistrationAccessToken,
             RegistrationClientUri = registrationResult.RegistrationClientUri,
             RedirectUris = registrationResult.Client.RedirectUris?.ToArray(),
             GrantTypes = registrationResult.Client.AllowedGrantTypes?.ToArray(),
             //TODO: Better way to presist this? techincally the default here is fragile
-            TokenEndpointAuthMethod = registrationResult.OriginalRequest.TokenEndpointAuthMethod ?? "client_secret_basic",
+            TokenEndpointAuthMethod = registrationResult.OriginalRequest.TokenEndpointAuthMethod,
             ResponseTypes = registrationResult.OriginalRequest.ResponseTypes?.ToArray(),
+            
         };
 
         if (registrationResult.OriginalRequest.Enabled.HasValue)

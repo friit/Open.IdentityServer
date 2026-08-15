@@ -4,8 +4,11 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Models.Results;
@@ -19,12 +22,20 @@ public class DynamicClientManagementService : IDynamicClientManagementService
 {
     private const string JsonWebKeySecretType = "JWK";
 
+    private readonly DynamicClientManagementOptions _options;
     private readonly IDynamicClientManagementStore _clientStore;
     private readonly ILogger<DynamicClientManagementService> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public DynamicClientManagementService(IDynamicClientManagementStore clientStore, ILogger<DynamicClientManagementService> logger)
+    public DynamicClientManagementService(
+        IDynamicClientManagementStore clientStore, 
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<DynamicClientManagementOptions> options,
+        ILogger<DynamicClientManagementService> logger)
     {
         _clientStore = clientStore;
+        _httpContextAccessor = httpContextAccessor;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -110,12 +121,28 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             Client = client,
             ClientSecret = generatedClientSecret,
             RegistrationAccessToken = token.raw,
-            RegistrationClientUri = $"connect/register/{generatedClientId}",
+            RegistrationClientUri = GetRegistrationClientUri(generatedClientId),
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
             //Todo: Implement proper expiration for client secrets if needed. For now, we set it to UnixEpoch if a secret is generated, otherwise null.
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
             OriginalRequest = request,
         };
+    }
+
+    private string GetRegistrationClientUri(string clientId)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        var registerPath = _options.RegisterPath;
+        
+        var uriBuilder = new UriBuilder(
+            httpContext.Request.Scheme,
+            httpContext.Request.Host.Host,
+            httpContext.Request.Host.Port ?? -1)
+        {
+            Path = $"{registerPath}/{clientId}"
+        };
+
+        return uriBuilder.ToString();
     }
 
     protected virtual (string raw, string hash) GenerateToken(Client client, RegisterRequest request)

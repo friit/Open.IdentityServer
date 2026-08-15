@@ -10,9 +10,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
+using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Services.Default;
@@ -28,14 +31,30 @@ public class DynamicClientManagementServiceTests
     private const string SharedSecretType = "SharedSecret";
     private const string JsonWebKeySecretType = "JWK";
 
+    private readonly DynamicClientManagementOptions _options;
     private readonly DynamicClientManagementService _subject;
     private readonly IDynamicClientManagementStore _store;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public DynamicClientManagementServiceTests()
     {
+        _options = new DynamicClientManagementOptions();
+        
+        var httpContext = new DefaultHttpContext
+        {
+            Request =
+            {
+                Scheme = "https",
+                Host = new HostString("localhost")
+            }
+        };
+        _httpContextAccessor = Mock.Of<IHttpContextAccessor>(a => a.HttpContext == httpContext);
+        
         _store = Mock.Of<IDynamicClientManagementStore>();
         _subject = new DynamicClientManagementService(
             _store,
+            _httpContextAccessor,
+            Options.Create(_options),
             NullLogger<DynamicClientManagementService>.Instance);
     }
 
@@ -169,26 +188,54 @@ public class DynamicClientManagementServiceTests
     [Fact]
     public async Task register_should_create_expected_client()
     {
-        var request = CreateRegisterRequest();
-        request.TokenEndpointAuthMethod = "none";
+        // Arrange
 
+        var request = CreateRegisterRequest();
+        // Expect client secret to be generated.
+        request.TokenEndpointAuthMethod = "client_secret_basic";
+        
+        string generatedClientId = null!;
+        ICollection<Secret> generatedSecrets = [];
+        
+        // Callback to get the generated values.
+        Mock.Get(_store)
+            .Setup(s => s.RegisterClientAsync(It.IsAny<Client>(), It.IsAny<CancellationToken>()))
+            .Callback((Client client, CancellationToken cancellationToken) =>
+            {
+                generatedClientId = client.ClientId;
+                generatedSecrets = client.ClientSecrets;
+            });
+        
+        
+        // Act
         var result = await _subject.RegisterAsync(request, TestContext.Current.CancellationToken);
         result.RegistrationAccessToken.Should().NotBeNullOrWhiteSpace();
 
+        // Generate expected token hash for comparison.
         var registrationAccessToken = result.RegistrationAccessToken!;
         var tokenBytes = WebEncoders.Base64UrlDecode(registrationAccessToken);
         var expectedTokenHash = Convert.ToBase64String(SHA256.HashData(tokenBytes));
         
+        // Assert
+        
+        result.Client.ClientId.Should().Be(generatedClientId);
+        
+        var createdSecret = generatedSecrets.SingleOrDefault(s => s.Type == SharedSecretType);
+        createdSecret.Should().NotBeNull();
+        
+        result.Client.Properties["dcm_token_hash"].Should().Be(expectedTokenHash);
+        
+        // Assert that the client was registered with the expected properties that aren't generated.
         result.Client.Should().BeEquivalentTo(
             CreateClient(),
             options => options
                 .Excluding(client => client.ClientId)
                 .Excluding(client => client.ClientSecrets)
                 .Excluding(client => client.Properties)
+                .Excluding(client => client.RequireClientSecret) // This is set based on the auth method.
             );
-        
-        result.Client.Properties["dcm_token_hash"].Should().Be(expectedTokenHash);
-        result.Client.Properties["dcm_token_hash"].Should().NotBe(registrationAccessToken);
+    
+        result.RegistrationClientUri.Should().Be($"https://localhost/connect/register/{result.Client.ClientId}");
         result.OriginalRequest.Should().Be(request);
     }
 
@@ -267,7 +314,7 @@ public class DynamicClientManagementServiceTests
         return new RegisterRequest
         {
             RedirectUris = ["https://redirect.test/callback"],
-            TokenEndpointAuthMethod = "",
+            TokenEndpointAuthMethod = "token_endpoint_auth_method",
             GrantTypes = ["grant_type"],
             ResponseTypes = ["response_type"],
             ClientName = "client_name",

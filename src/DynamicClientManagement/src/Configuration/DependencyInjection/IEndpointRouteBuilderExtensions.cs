@@ -4,16 +4,25 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientManagement.Endpoints;
 
 namespace Open.IdentityServer.DynamicClientManagement.Configuration.DependencyInjection;
 
 public static class IEndpointRouteBuilderExtensions
 {
-    public static RouteHandlerBuilder MapDynamicClientManagement(this IEndpointRouteBuilder builder, string route = "connect/register")
+    public static RouteHandlerBuilder MapDynamicClientManagement(this IEndpointRouteBuilder builder)
     {
+        var options = builder.ServiceProvider.GetRequiredService<IOptions<DynamicClientManagementOptions>>();
+
+        if (string.IsNullOrWhiteSpace(options.Value.RegisterPath))
+        {
+            throw new ArgumentException("Route cannot be null or whitespace", nameof(options.Value.RegisterPath));
+        }
+        
         RouteHandlerBuilder registerBuilder = builder.MapPost(
-            route, 
+            options.Value.RegisterPath, 
             (RegisterEndpoint endpoint, HttpContext context) => endpoint.ProcessRegistrationAsync(context)
             )
             .WithName("DynamicClientManagement")
