@@ -85,11 +85,6 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             client.Properties["contacts"] = JsonSerializer.Serialize(request.Contacts);
         }
         
-        if(request.TermsOfServiceUri != null)
-        {
-            client.Properties["terms_of_service_uri"] = request.TermsOfServiceUri;
-        }
-        
         if(request.PolicyUri != null)
         {
             client.Properties["policy_uri"] = request.PolicyUri;
