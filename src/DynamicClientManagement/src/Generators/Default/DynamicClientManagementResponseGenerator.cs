@@ -13,6 +13,7 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         
         var response = new RegisterResponse
         {
+            ClientName = registrationResult.Client.ClientName,
             ClientId = registrationResult.Client.ClientId,
             ClientSecret = registrationResult.ClientSecret,
             ClientIdIssuedAt = registrationResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
@@ -36,12 +37,7 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         {
             response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(registrationResult.Client.Enabled);
         }
-        
-        if (registrationResult.OriginalRequest.ClientName != null)
-        {
-            response.AdditionalData["client_name"] = JsonSerializer.SerializeToElement(registrationResult.Client.ClientName);
-        }
-        
+ 
         if (registrationResult.OriginalRequest.ClientUri != null)
         {
             response.AdditionalData["client_uri"] = JsonSerializer.SerializeToElement(registrationResult.Client.ClientUri);
