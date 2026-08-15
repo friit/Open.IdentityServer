@@ -225,15 +225,56 @@ public class DynamicClientManagementServiceTests
         
         result.Client.Properties["dcm_token_hash"].Should().Be(expectedTokenHash);
         
-        // Assert that the client was registered with the expected properties that aren't generated.
-        result.Client.Should().BeEquivalentTo(
-            CreateClient(),
-            options => options
-                .Excluding(client => client.ClientId)
-                .Excluding(client => client.ClientSecrets)
-                .Excluding(client => client.Properties)
-                .Excluding(client => client.RequireClientSecret) // This is set based on the auth method.
-            );
+        result.Client.ClientName.Should().Be("client_name");
+        result.Client.ClientUri.Should().Be("client_uri");
+        result.Client.LogoUri.Should().Be("logo_uri");
+        result.Client.RedirectUris.Should().BeEquivalentTo(new[] { "https://redirect.test/callback" });
+        result.Client.PostLogoutRedirectUris.Should().BeEquivalentTo(new[] { "post_logout_redirect_uri" });
+        result.Client.AllowedGrantTypes.Should().BeEquivalentTo(new[] { "grant_type" });
+        result.Client.AllowedScopes.Should().BeEquivalentTo(new[] { "scope1", "scope2" });
+        result.Client.RequirePkce.Should().BeFalse();
+        result.Client.AllowOfflineAccess.Should().BeFalse();
+        result.Client.AllowAccessTokensViaBrowser.Should().BeTrue();
+        result.Client.FrontChannelLogoutUri.Should().Be("front_channel_logout_uri");
+        result.Client.FrontChannelLogoutSessionRequired.Should().BeTrue();
+        result.Client.BackChannelLogoutUri.Should().Be("back_channel_logout_uri");
+        result.Client.BackChannelLogoutSessionRequired.Should().BeTrue();
+        result.Client.UserSsoLifetime.Should().Be(1);
+        result.Client.InitiateLoginUri.Should().Be("initiate_login_uri");
+        result.Client.Enabled.Should().BeFalse();
+        result.Client.RequireConsent.Should().BeTrue();
+        result.Client.AllowRememberConsent.Should().BeFalse();
+        result.Client.RequireRequestObject.Should().BeTrue();
+        result.Client.AlwaysIncludeUserClaimsInIdToken.Should().BeTrue();
+        result.Client.IdentityTokenLifetime.Should().Be(1);
+        result.Client.AccessTokenLifetime.Should().Be(1);
+        result.Client.AuthorizationCodeLifetime.Should().Be(1);
+        result.Client.AbsoluteRefreshTokenLifetime.Should().Be(1);
+        result.Client.SlidingRefreshTokenLifetime.Should().Be(1);
+        result.Client.ConsentLifetime.Should().Be(1);
+        result.Client.RefreshTokenUsage.Should().Be(TokenUsage.OneTimeOnly);
+        result.Client.UpdateAccessTokenClaimsOnRefresh.Should().BeTrue();
+        result.Client.RefreshTokenExpiration.Should().Be(TokenExpiration.Absolute);
+        result.Client.AccessTokenType.Should().Be(AccessTokenType.Jwt);
+        result.Client.EnableLocalLogin.Should().BeFalse();
+        result.Client.IdentityProviderRestrictions.Should().BeEquivalentTo(new[] { "idp1", "idp2" });
+        result.Client.IncludeJwtId.Should().BeTrue();
+        result.Client.Claims.Should().BeEquivalentTo(new[]
+        {
+            new ClientClaim("claim1", "value1"),
+            new ClientClaim("claim2", "123")
+        });
+        result.Client.ClientClaimsPrefix.Should().Be("prefix");
+        result.Client.PairWiseSubjectSalt.Should().Be("pairwise_subject_salt");
+        result.Client.UserCodeType.Should().Be("user_code_type");
+        result.Client.DeviceCodeLifetime.Should().Be(1);
+        result.Client.AllowedCorsOrigins.Should().BeEquivalentTo(new[] { "https://cors.test" });
+        
+        result.Client.Properties["contacts"].Should().Be(JsonSerializer.Serialize(new[] { "contact" }));
+        result.Client.Properties["terms_of_service_uri"].Should().Be("https://client.test/tos");
+        result.Client.Properties["policy_uri"].Should().Be("policy_uri");
+        result.Client.Properties["software_id"].Should().Be("software_id");
+        result.Client.Properties["software_version"].Should().Be("software_version");
     
         result.RegistrationClientUri.Should().Be($"https://localhost/connect/register/{result.Client.ClientId}");
         result.OriginalRequest.Should().Be(request);

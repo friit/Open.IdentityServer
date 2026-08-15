@@ -73,6 +73,9 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             BackChannelLogoutUri = request.BackChannelLogoutUri,
             UserSsoLifetime = request.UserSsoLifetime ?? request.DefaultMaxAge,
             InitiateLoginUri = request.InitiateLoginUri,
+            Claims = request.ClientClaims?
+                .Select(claim => new ClientClaim(claim.Key, claim.Value.ToString()))
+                .ToList()
         };
 
         ApplyOpenIdentityServerParameters(request, client);
@@ -100,6 +103,26 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         if(request.SoftwareVersion != null)
         {
             client.Properties["software_version"] = request.SoftwareVersion;
+        }
+        
+        if(request.TermsOfServiceUri != null)
+        {
+            client.Properties["tos_uri"] = request.TermsOfServiceUri;
+        }
+        
+        if(request.SoftwareId != null)
+        {
+            client.Properties["software_id"] = request.SoftwareId;
+        }
+        
+        if(request.SoftwareVersion != null)
+        {
+            client.Properties["software_version"] = request.SoftwareVersion;
+        }
+
+        foreach (var metadata in request.AdditionalMetadata)
+        {
+            client.Properties[metadata.Key] = metadata.Value.GetString();
         }
 
         var token = GenerateToken(client, request);

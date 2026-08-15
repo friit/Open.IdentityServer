@@ -74,7 +74,7 @@ public record RegisterResponse
     /// The scope values that the client is authorized to use, represented as a space-delimited string.
     /// </summary>
     [JsonPropertyName("scope")]
-    public string? Scope { get; init; }
+    public string? Scope { get; set; }
     
     // OIDC
    
