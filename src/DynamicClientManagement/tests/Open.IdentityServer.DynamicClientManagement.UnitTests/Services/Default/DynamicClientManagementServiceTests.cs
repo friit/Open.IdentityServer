@@ -271,7 +271,7 @@ public class DynamicClientManagementServiceTests
         result.Client.AllowedCorsOrigins.Should().BeEquivalentTo(new[] { "https://cors.test" });
         
         result.Client.Properties["contacts"].Should().Be(JsonSerializer.Serialize(new[] { "contact" }));
-        result.Client.Properties["terms_of_service_uri"].Should().Be("https://client.test/tos");
+        result.Client.Properties["tos_uri"].Should().Be("https://client.test/tos");
         result.Client.Properties["policy_uri"].Should().Be("policy_uri");
         result.Client.Properties["software_id"].Should().Be("software_id");
         result.Client.Properties["software_version"].Should().Be("software_version");
@@ -293,7 +293,7 @@ public class DynamicClientManagementServiceTests
         var properties = new Dictionary<string, string>
         {
             ["contacts"] = JsonSerializer.Serialize(new[] { "contact" }),
-            ["terms_of_service_uri"] = "https://client.test/tos",
+            ["tos_uri"] = "https://client.test/tos",
             ["policy_uri"] = "policy_uri",
             ["software_id"] = "software_id",
             ["software_version"] = "software_version"

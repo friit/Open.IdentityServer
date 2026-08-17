@@ -69,12 +69,66 @@ public record RegisterResponse
     /// </summary>
     [JsonPropertyName("client_name")]
     public string? ClientName { get; init; }
+
+    /// <summary>
+    /// The URL of the client's home page.
+    /// </summary>
+    [JsonPropertyName("client_uri")]
+    public string? ClientUri { get; init; }
+
+    /// <summary>
+    /// The URL of the client's logo.
+    /// </summary>
+    [JsonPropertyName("logo_uri")]
+    public string? LogoUri { get; init; }
     
     /// <summary>
     /// The scope values that the client is authorized to use, represented as a space-delimited string.
     /// </summary>
     [JsonPropertyName("scope")]
     public string? Scope { get; set; }
+
+    /// <summary>
+    /// Email addresses of people responsible for this client.
+    /// </summary>
+    [JsonPropertyName("contacts")]
+    public string[]? Contacts { get; init; }
+
+    /// <summary>
+    /// The client's terms of service URL.
+    /// </summary>
+    [JsonPropertyName("tos_uri")]
+    public string? TermsOfServiceUri { get; init; }
+
+    /// <summary>
+    /// The client's policy URL.
+    /// </summary>
+    [JsonPropertyName("policy_uri")]
+    public string? PolicyUri { get; init; }
+
+    /// <summary>
+    /// The URL of the client's JSON Web Key Set document.
+    /// </summary>
+    [JsonPropertyName("jwks_uri")]
+    public string? JsonWebKeySetUri { get; init; }
+
+    /// <summary>
+    /// The client's JSON Web Key Set document.
+    /// </summary>
+    [JsonPropertyName("jwks")]
+    public JsonElement? JsonWebKeySet { get; init; }
+
+    /// <summary>
+    /// The identifier for the software that comprises this client.
+    /// </summary>
+    [JsonPropertyName("software_id")]
+    public string? SoftwareId { get; init; }
+
+    /// <summary>
+    /// The version identifier for the software that comprises this client.
+    /// </summary>
+    [JsonPropertyName("software_version")]
+    public string? SoftwareVersion { get; init; }
     
     // OIDC
    

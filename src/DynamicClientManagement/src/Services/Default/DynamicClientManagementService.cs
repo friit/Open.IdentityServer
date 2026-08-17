@@ -21,6 +21,8 @@ namespace Open.IdentityServer.DynamicClientManagement.Services.Default;
 public class DynamicClientManagementService : IDynamicClientManagementService
 {
     private const string JsonWebKeySecretType = "JWK";
+    private const string InternalPropertyPrefix = "__dcm_property:";
+    private const string DynamicClientManagementTokenHashProperty = InternalPropertyPrefix + "dcm_token_hash";
 
     private readonly DynamicClientManagementOptions _options;
     private readonly IDynamicClientManagementStore _clientStore;
@@ -82,49 +84,49 @@ public class DynamicClientManagementService : IDynamicClientManagementService
 
         if(request.Contacts != null)
         {
-            client.Properties["contacts"] = JsonSerializer.Serialize(request.Contacts);
+            client.Properties[InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(request.Contacts);
         }
         
         if(request.PolicyUri != null)
         {
-            client.Properties["policy_uri"] = request.PolicyUri;
+            client.Properties[InternalPropertyPrefix + "policy_uri"] = request.PolicyUri;
         }
         
         if(request.SoftwareId != null)
         {
-            client.Properties["software_id"] = request.SoftwareId;
+            client.Properties[InternalPropertyPrefix + "software_id"] = request.SoftwareId;
         }
         
         if(request.SoftwareVersion != null)
         {
-            client.Properties["software_version"] = request.SoftwareVersion;
+            client.Properties[InternalPropertyPrefix + "software_version"] = request.SoftwareVersion;
         }
         
         if(request.TermsOfServiceUri != null)
         {
-            client.Properties["tos_uri"] = request.TermsOfServiceUri;
+            client.Properties[InternalPropertyPrefix + "tos_uri"] = request.TermsOfServiceUri;
         }
         
-        if(request.SoftwareId != null)
+        if (request.JsonWebKeySetUri != null)
         {
-            client.Properties["software_id"] = request.SoftwareId;
-        }
-        
-        if(request.SoftwareVersion != null)
-        {
-            client.Properties["software_version"] = request.SoftwareVersion;
+            client.Properties[InternalPropertyPrefix + "jwks_uri"] = request.JsonWebKeySetUri;
         }
 
-        foreach (var metadata in request.AdditionalMetadata)
+        if (request.JsonWebKeySet.HasValue)
         {
-            client.Properties[metadata.Key] = metadata.Value.GetString();
+            client.Properties[InternalPropertyPrefix + "jwks"] = request.JsonWebKeySet.Value.GetRawText();
+        }
+
+        foreach (var metadata in request.AdditionalMetadata ?? [])
+        {
+            client.Properties[InternalPropertyPrefix + metadata.Key] = metadata.Value.GetRawText();
         }
 
         var token = GenerateToken(client, request);
         
         //TODO: review this, should we store the token in the client properties? or should we store it in a separate store?
         // Should this also store actual data?
-        client.Properties["dcm_token_hash"] = token.hash;
+        client.Properties[DynamicClientManagementTokenHashProperty] = token.hash;
         
         await _clientStore.RegisterClientAsync(client, cancellationToken);
         

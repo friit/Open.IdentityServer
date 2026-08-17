@@ -273,6 +273,8 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     /// </summary>
     protected virtual (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =>
     [
+        
+        //("jwks_uri", r => r.JsonWebKeySetUri is not null) TODO Not currently supported by Open.IdentityServer but just want to ignore?,
         ("subject_type", r => r.SubjectType is not null),
         ("response_types", r => r.ResponseTypes is not null),
         ("request_uris", r => r.RequestUris is not null),
