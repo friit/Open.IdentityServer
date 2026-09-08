@@ -8,7 +8,7 @@ using AwesomeAssertions;
 using Open.IdentityServer.DynamicClientManagement.Generators;
 using Open.IdentityServer.DynamicClientManagement.Generators.Default;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
+using Open.IdentityServer.DynamicClientManagement.Services.Results;
 using Open.IdentityServer.Models;
 using Xunit;
 
@@ -26,7 +26,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_when_canceled_should_throw()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -34,7 +34,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 Properties = new Dictionary<string, string>()
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -50,7 +50,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_when_enabled_was_requested_should_include_enabled_in_additional_data()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -59,7 +59,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 Properties = new Dictionary<string, string>()
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest
+            OriginalRequestDto = new RegisterRequestDTO
             {
                 Enabled = true
             }
@@ -75,7 +75,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_return_response()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -95,7 +95,7 @@ public class DynamicClientManagementResponseGeneratorTests
             ClientSecretExpiresAt = DateTimeOffset.UtcNow.AddDays(30),
             RegistrationAccessToken = "access-token",
             RegistrationClientUri = "https://example.com/register",
-            OriginalRequest = new RegisterRequest
+            OriginalRequestDto = new RegisterRequestDTO
             {
                 TokenEndpointAuthMethod = "client_secret_basic",
                 ResponseTypes = new[] { "code" }
@@ -127,7 +127,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_map_known_properties_and_exclude_them_from_additional_data()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -148,7 +148,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 }
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         var response = await _subject.GenerateAsync(
@@ -180,7 +180,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_ignore_non_dcm_properties()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -193,7 +193,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 }
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         var response = await _subject.GenerateAsync(
@@ -209,7 +209,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_exclude_internal_properties()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -221,7 +221,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 }
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         var response = await _subject.GenerateAsync(
@@ -236,7 +236,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_preserve_additional_metadata_json_types()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -251,7 +251,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 }
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         var response = await _subject.GenerateAsync(
@@ -272,7 +272,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_when_dcm_additional_metadata_is_not_valid_json_should_throw()
     {
-        var registrationResult = new DynamicClientManagementResult
+        var registrationResult = new DynamicClientManagementRegisterResult
         {
             Client = new Client
             {
@@ -283,7 +283,7 @@ public class DynamicClientManagementResponseGeneratorTests
                 }
             },
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
-            OriginalRequest = new RegisterRequest()
+            OriginalRequestDto = new RegisterRequestDTO()
         };
 
         var act = async () => await _subject.GenerateAsync(

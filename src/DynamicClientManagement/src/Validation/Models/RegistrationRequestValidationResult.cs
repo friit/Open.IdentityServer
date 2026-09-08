@@ -11,18 +11,18 @@ public class RegistrationRequestValidationResult
     public bool IsError => Errors.Length != 0;
     public ValidationError[] Errors { get; private set; }
 
-    public RegisterRequest? Request { get; private set; }
+    public RegisterRequestDTO? RequestDto { get; private set; }
 
-    public RegistrationRequestValidationResult(RegisterRequest request)
+    public RegistrationRequestValidationResult(RegisterRequestDTO requestDto)
     {
-        Request = request;
+        RequestDto = requestDto;
         Errors = Array.Empty<ValidationError>();
     }
 
     public RegistrationRequestValidationResult(
-        RegisterRequest request,
+        RegisterRequestDTO requestDto,
         ValidationError error)
-        : this(request)
+        : this(requestDto)
     {
         Errors = [error];
     }

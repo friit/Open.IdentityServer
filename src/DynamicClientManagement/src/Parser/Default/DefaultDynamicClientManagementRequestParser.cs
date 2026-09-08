@@ -11,7 +11,6 @@ using Microsoft.IdentityModel.Tokens;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 
@@ -90,7 +89,7 @@ public class DefaultDynamicClientManagementRequestParser : IDynamicClientManagem
         {
             return new RegistrationRequestParseResult()
             {
-                Request = DeserializeRequest(requestJson)
+                RequestDto = DeserializeRequest(requestJson)
             };
         }
 
@@ -112,12 +111,12 @@ public class DefaultDynamicClientManagementRequestParser : IDynamicClientManagem
 
         return new RegistrationRequestParseResult()
         {
-            Request = mergedRequest,
+            RequestDto = mergedRequest,
             SoftwareStatement = softwareStatementJwt
         };
     }
 
-    private RegisterRequest ApplySoftwareStatement(JsonObject requestJson, JwtSecurityToken softwareStatementJwt)
+    private RegisterRequestDTO ApplySoftwareStatement(JsonObject requestJson, JwtSecurityToken softwareStatementJwt)
     {
         JsonObject? softwareStatementJson;
         try
@@ -173,11 +172,11 @@ public class DefaultDynamicClientManagementRequestParser : IDynamicClientManagem
             "software_statement must be a string.");
     }
 
-    private RegisterRequest DeserializeRequest(JsonNode? requestJson)
+    private RegisterRequestDTO DeserializeRequest(JsonNode? requestJson)
     {
         try
         {
-            return requestJson.Deserialize<RegisterRequest>(_options.Value.ParserJsonSerializerOptions)
+            return requestJson.Deserialize<RegisterRequestDTO>(_options.Value.ParserJsonSerializerOptions)
                    ?? throw new DynamicClientManagementParseException(
                        Constants.RegisterErrors.InvalidRequest,
                        "Request body must contain a JSON object.");

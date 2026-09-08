@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Open.IdentityServer.DynamicClientManagement.Models;
 
-public class RegisterRequest
+public record RegisterRequestDTO
 {
     // RFC 7591 / OAuth 2.0 Dynamic Client Management
 

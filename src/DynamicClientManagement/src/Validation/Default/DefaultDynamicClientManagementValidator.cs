@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
+using Open.IdentityServer.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.Validation.Default;
 
@@ -46,19 +46,19 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var validationResult = new RegistrationRequestValidationResult(parseResult.Request);
+        var validationResult = new RegistrationRequestValidationResult(parseResult.RequestDto);
 
-        ValidateUnsupportedMetadata(parseResult.Request, validationResult);
-        ValidateGrantTypes(parseResult.Request, validationResult);
-        ValidateRedirectUris(parseResult.Request, validationResult);
-        ValidateJsonWebKey(parseResult.Request, validationResult);
-        ValidateInitiateLoginUri(parseResult.Request, validationResult);
-        ValidateSectorIdentifierUri(parseResult.Request, validationResult);
-        ValidatePostLogoutRedirectUris(parseResult.Request, validationResult);
-        ValidateFrontChannelLogoutUri(parseResult.Request, validationResult);
-        ValidateBackChannelLogoutUri(parseResult.Request, validationResult);
-        ValidateDefaultMaxAge(parseResult.Request, validationResult);
-        ValidateLifetimes(parseResult.Request, validationResult);
+        ValidateUnsupportedMetadata(parseResult.RequestDto, validationResult);
+        ValidateGrantTypes(parseResult.RequestDto, validationResult);
+        ValidateRedirectUris(parseResult.RequestDto, validationResult);
+        ValidateJsonWebKey(parseResult.RequestDto, validationResult);
+        ValidateInitiateLoginUri(parseResult.RequestDto, validationResult);
+        ValidateSectorIdentifierUri(parseResult.RequestDto, validationResult);
+        ValidatePostLogoutRedirectUris(parseResult.RequestDto, validationResult);
+        ValidateFrontChannelLogoutUri(parseResult.RequestDto, validationResult);
+        ValidateBackChannelLogoutUri(parseResult.RequestDto, validationResult);
+        ValidateDefaultMaxAge(parseResult.RequestDto, validationResult);
+        ValidateLifetimes(parseResult.RequestDto, validationResult);
 
         await ValidateSoftwareStatementAsync(parseResult, validationResult, cancellationToken);
 
@@ -72,140 +72,145 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         return validationResult;
     }
 
-    private void ValidateUnsupportedMetadata(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    public Task<bool> ValidateTokenAsync(Client client, string token)
     {
-        foreach (var unsupportedMetadataField in GetUnsupportedMetadata(request))
+        throw new NotImplementedException();
+    }
+
+    private void ValidateUnsupportedMetadata(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
+    {
+        foreach (var unsupportedMetadataField in GetUnsupportedMetadata(requestDto))
         {
             validationResult.AddError(new UnsupportedMetadataFieldError(unsupportedMetadataField));
         }
     }
 
-    private void ValidateGrantTypes(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateGrantTypes(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.GrantTypes == null || !request.GrantTypes.Any())
+        if (requestDto.GrantTypes == null || !requestDto.GrantTypes.Any())
         {
             validationResult.AddError(new GrantTypesRequiredError());
         }
     }
 
-    private void ValidateRedirectUris(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateRedirectUris(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.RedirectUris == null || !request.RedirectUris.Any())
+        if (requestDto.RedirectUris == null || !requestDto.RedirectUris.Any())
         {
             validationResult.AddError(new RedirectUrisRequiredError());
             return;
         }
         
-        foreach (var uri in request.RedirectUris)
+        foreach (var uri in requestDto.RedirectUris)
         {
             ValidateUri(uri, "RedirectUri", validationResult);
         }
     }
 
-    private void ValidatePostLogoutRedirectUris(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidatePostLogoutRedirectUris(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.PostLogoutRedirectUris == null || !request.PostLogoutRedirectUris.Any())
+        if (requestDto.PostLogoutRedirectUris == null || !requestDto.PostLogoutRedirectUris.Any())
         {
             return;
         }
 
-        foreach (var uri in request.PostLogoutRedirectUris)
+        foreach (var uri in requestDto.PostLogoutRedirectUris)
         {
             ValidateUri(uri, "PostLogoutRedirectUri", validationResult);
         }
     }
 
-    private void ValidateJsonWebKey(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateJsonWebKey(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (!string.IsNullOrWhiteSpace(request.JsonWebKeySetUri) && request.JsonWebKeySet is not null)
+        if (!string.IsNullOrWhiteSpace(requestDto.JsonWebKeySetUri) && requestDto.JsonWebKeySet is not null)
         {
             validationResult.AddError(new JsonWebKeySetDisallowedError());
             return;
         }
         
-        if(request.JsonWebKeySet is null && request.TokenEndpointAuthMethod == Constants.TokenEndpointAuthMethod.PrivateKeyJwt)
+        if(requestDto.JsonWebKeySet is null && requestDto.TokenEndpointAuthMethod == Constants.TokenEndpointAuthMethod.PrivateKeyJwt)
         {
             validationResult.AddError(new JsonWebKeySetRequiredError());
             return;
         }
 
-        ValidateUri(request.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
+        ValidateUri(requestDto.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
 
         
     }
 
-    private void ValidateInitiateLoginUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateInitiateLoginUri(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (string.IsNullOrWhiteSpace(request.InitiateLoginUri))
+        if (string.IsNullOrWhiteSpace(requestDto.InitiateLoginUri))
         {
             return;
         }
 
-        ValidateUri(request.InitiateLoginUri, "InitiateLoginUri", validationResult);
+        ValidateUri(requestDto.InitiateLoginUri, "InitiateLoginUri", validationResult);
     }
 
-    private void ValidateSectorIdentifierUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateSectorIdentifierUri(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (string.IsNullOrWhiteSpace(request.SectorIdentifierUri))
+        if (string.IsNullOrWhiteSpace(requestDto.SectorIdentifierUri))
         {
             return;
         }
 
-        ValidateUri(request.SectorIdentifierUri, "SectorIdentifierUri", validationResult);
+        ValidateUri(requestDto.SectorIdentifierUri, "SectorIdentifierUri", validationResult);
     }
 
-    private void ValidateFrontChannelLogoutUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateFrontChannelLogoutUri(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.FrontChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.FrontChannelLogoutUri))
+        if (requestDto.FrontChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(requestDto.FrontChannelLogoutUri))
         {
             validationResult.AddError(new FrontChannelLogoutUriRequiredError());
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(request.FrontChannelLogoutUri))
+        if (string.IsNullOrWhiteSpace(requestDto.FrontChannelLogoutUri))
         {
             return;
         }
 
-        ValidateUri(request.FrontChannelLogoutUri, "FrontChannelLogoutUri", validationResult);
+        ValidateUri(requestDto.FrontChannelLogoutUri, "FrontChannelLogoutUri", validationResult);
     }
 
-    private void ValidateBackChannelLogoutUri(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateBackChannelLogoutUri(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.BackChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(request.BackChannelLogoutUri))
+        if (requestDto.BackChannelLogoutSessionRequired == true && string.IsNullOrWhiteSpace(requestDto.BackChannelLogoutUri))
         {
             validationResult.AddError(new BackChannelLogoutUriRequiredError());
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(request.BackChannelLogoutUri))
+        if (string.IsNullOrWhiteSpace(requestDto.BackChannelLogoutUri))
         {
             return;
         }
 
-        ValidateUri(request.BackChannelLogoutUri, "BackChannelLogoutUri", validationResult);
+        ValidateUri(requestDto.BackChannelLogoutUri, "BackChannelLogoutUri", validationResult);
     }
 
-    private void ValidateDefaultMaxAge(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateDefaultMaxAge(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
-        if (request.DefaultMaxAge is < 0)
+        if (requestDto.DefaultMaxAge is < 0)
         {
             validationResult.AddError(new DefaultMaxAgeInvalidError());
         }
     }
 
-    private void ValidateLifetimes(RegisterRequest request, RegistrationRequestValidationResult validationResult)
+    private void ValidateLifetimes(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)
     {
         var lifetimes = new[]
         {
-            ("identity_token_lifetime", request.IdentityTokenLifetime),
-            ("access_token_lifetime", request.AccessTokenLifetime),
-            ("authorization_code_lifetime", request.AuthorizationCodeLifetime),
-            ("absolute_refresh_token_lifetime", request.AbsoluteRefreshTokenLifetime),
-            ("sliding_refresh_token_lifetime", request.SlidingRefreshTokenLifetime),
-            ("consent_lifetime", request.ConsentLifetime),
-            ("user_sso_lifetime", request.UserSsoLifetime),
-            ("device_code_lifetime", request.DeviceCodeLifetime)
+            ("identity_token_lifetime", requestDto.IdentityTokenLifetime),
+            ("access_token_lifetime", requestDto.AccessTokenLifetime),
+            ("authorization_code_lifetime", requestDto.AuthorizationCodeLifetime),
+            ("absolute_refresh_token_lifetime", requestDto.AbsoluteRefreshTokenLifetime),
+            ("sliding_refresh_token_lifetime", requestDto.SlidingRefreshTokenLifetime),
+            ("consent_lifetime", requestDto.ConsentLifetime),
+            ("user_sso_lifetime", requestDto.UserSsoLifetime),
+            ("device_code_lifetime", requestDto.DeviceCodeLifetime)
         };
 
         foreach (var (name, value) in lifetimes)
@@ -271,7 +276,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     /// Metadata fields that are not supported by Open.IdentityServer from the Dynamic Client Management specification.
     /// Override this property to add or move unsupported metadata fields.
     /// </summary>
-    protected virtual (string Name, Func<RegisterRequest, bool> IsPresent)[] UnsupportedMetadataRules =>
+    protected virtual (string Name, Func<RegisterRequestDTO, bool> IsPresent)[] UnsupportedMetadataRules =>
     [
         
         //("jwks_uri", r => r.JsonWebKeySetUri is not null) TODO Not currently supported by Open.IdentityServer but just want to ignore?,
@@ -290,9 +295,9 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         ("id_token_signed_response_alg", r => r.IdTokenSignedResponseAlgorithm is not null),
     ];
     
-    private IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequest request) =>
+    private IReadOnlyList<string> GetUnsupportedMetadata(RegisterRequestDTO requestDto) =>
         UnsupportedMetadataRules
-            .Where(r => r.IsPresent(request))
+            .Where(r => r.IsPresent(requestDto))
             .Select(r => r.Name)
             .ToList();
 

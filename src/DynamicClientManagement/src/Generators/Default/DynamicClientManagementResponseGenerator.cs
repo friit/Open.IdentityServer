@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
+using Open.IdentityServer.DynamicClientManagement.Services.Results;
 using Open.IdentityServer.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.Generators.Default;
@@ -21,49 +21,49 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         "software_version"
     };
 
-    public Task<RegisterResponse> GenerateAsync(DynamicClientManagementResult registrationResult, CancellationToken cancellationToken = default)
+    public Task<RegisterResponseDTO> GenerateAsync(DynamicClientManagementRegisterResult registrationRegisterResult, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
     
-        var response = new RegisterResponse
+        var response = new RegisterResponseDTO
         {
-            ClientName = registrationResult.Client.ClientName,
-            ClientId = registrationResult.Client.ClientId,
-            ClientSecret = registrationResult.ClientSecret,
-            ClientIdIssuedAt = registrationResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
-            ClientSecretExpiresAt = registrationResult.ClientSecretExpiresAt?.ToUnixTimeSeconds(),
-            RegistrationAccessToken = registrationResult.RegistrationAccessToken,
-            RegistrationClientUri = registrationResult.RegistrationClientUri,
-            RedirectUris = registrationResult.Client.RedirectUris?.ToArray(),
-            GrantTypes = registrationResult.Client.AllowedGrantTypes?.ToArray(),
+            ClientName = registrationRegisterResult.Client.ClientName,
+            ClientId = registrationRegisterResult.Client.ClientId,
+            ClientSecret = registrationRegisterResult.ClientSecret,
+            ClientIdIssuedAt = registrationRegisterResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
+            ClientSecretExpiresAt = registrationRegisterResult.ClientSecretExpiresAt?.ToUnixTimeSeconds(),
+            RegistrationAccessToken = registrationRegisterResult.RegistrationAccessToken,
+            RegistrationClientUri = registrationRegisterResult.RegistrationClientUri,
+            RedirectUris = registrationRegisterResult.Client.RedirectUris?.ToArray(),
+            GrantTypes = registrationRegisterResult.Client.AllowedGrantTypes?.ToArray(),
             //TODO: Better way to presist this? techincally the default here is fragile
-            TokenEndpointAuthMethod = registrationResult.OriginalRequest.TokenEndpointAuthMethod,
-            ResponseTypes = registrationResult.OriginalRequest.ResponseTypes?.ToArray(),
-            ClientUri = registrationResult.Client.ClientUri,
-            LogoUri = registrationResult.Client.LogoUri,
-            Contacts = GetContacts(registrationResult.Client),
-            TermsOfServiceUri = GetProperty(registrationResult.Client, "tos_uri"),
-            PolicyUri = GetProperty(registrationResult.Client, "policy_uri"),
-            JsonWebKeySetUri = GetProperty(registrationResult.Client, "jwks_uri"),
-            JsonWebKeySet = GetJsonProperty(registrationResult.Client, "jwks"),
-            SoftwareId = GetProperty(registrationResult.Client, "software_id"),
-            SoftwareVersion = GetProperty(registrationResult.Client, "software_version"),
+            TokenEndpointAuthMethod = registrationRegisterResult.OriginalRequestDto.TokenEndpointAuthMethod,
+            ResponseTypes = registrationRegisterResult.OriginalRequestDto.ResponseTypes?.ToArray(),
+            ClientUri = registrationRegisterResult.Client.ClientUri,
+            LogoUri = registrationRegisterResult.Client.LogoUri,
+            Contacts = GetContacts(registrationRegisterResult.Client),
+            TermsOfServiceUri = GetProperty(registrationRegisterResult.Client, "tos_uri"),
+            PolicyUri = GetProperty(registrationRegisterResult.Client, "policy_uri"),
+            JsonWebKeySetUri = GetProperty(registrationRegisterResult.Client, "jwks_uri"),
+            JsonWebKeySet = GetJsonProperty(registrationRegisterResult.Client, "jwks"),
+            SoftwareId = GetProperty(registrationRegisterResult.Client, "software_id"),
+            SoftwareVersion = GetProperty(registrationRegisterResult.Client, "software_version"),
             
         };
 
-        if (registrationResult.Client.AllowedScopes != null && registrationResult.Client.AllowedScopes.Any())
+        if (registrationRegisterResult.Client.AllowedScopes != null && registrationRegisterResult.Client.AllowedScopes.Any())
         {
-            response.Scope = string.Join(" ", registrationResult.Client.AllowedScopes);
+            response.Scope = string.Join(" ", registrationRegisterResult.Client.AllowedScopes);
         }
     
-        if (registrationResult.OriginalRequest.Enabled.HasValue)
+        if (registrationRegisterResult.OriginalRequestDto.Enabled.HasValue)
         {
-            response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(registrationResult.Client.Enabled);
+            response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(registrationRegisterResult.Client.Enabled);
         }
         
         
 
-        var additionalData = registrationResult.Client.Properties
+        var additionalData = registrationRegisterResult.Client.Properties
             .Where(property => property.Key.StartsWith(InternalPropertyPrefix, StringComparison.Ordinal))
             .Select(property => new
             {

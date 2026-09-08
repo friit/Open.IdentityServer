@@ -15,7 +15,7 @@ public sealed class RegistrationRequestParseResult
     /// Gets the parsed registration request.
     /// The Request is parsed from JSON and merged with the values from the software statement, if present.
     /// </summary>
-    public required RegisterRequest Request { get; init; }
+    public required RegisterRequestDTO RequestDto { get; init; }
 
     /// <summary>
     /// Gets the optional software statement extracted from the request.

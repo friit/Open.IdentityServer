@@ -28,7 +28,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     private HttpContext _context;
     private DynamicClientManagementOptions _options;
     private DefaultDynamicClientManagementRequestParser _subject;
-    private RegisterRequest _request;
+    private RegisterRequestDTO requestDto;
     
     public DefaultDynamicClientManagementRequestParserTests()
     {
@@ -39,16 +39,16 @@ public class DefaultDynamicClientManagementRequestParserTests
     [Trait("Category", Category)]
     public async Task parse_when_redirect_uris_is_empty_should_return_request()
     {
-        _request = new RegisterRequest();
+        requestDto = new RegisterRequestDTO();
         
-        SetJsonBody(_request);
+        SetJsonBody(requestDto);
         
         var result = await _subject.ParseAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
         
-        result.Request.Should().BeEquivalentTo(_request);
+        result.RequestDto.Should().BeEquivalentTo(requestDto);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     [Trait("Category", Category)]
     public async Task parse_when_content_type_is_json_with_charset_should_return_valid_request()
     {
-        SetJsonBody(_request);
+        SetJsonBody(requestDto);
         _context.Request.ContentType = "application/json; charset=utf-8";
 
         var result = await _subject.ParseAsync(
@@ -109,17 +109,17 @@ public class DefaultDynamicClientManagementRequestParserTests
             _context.Request.ContentType,
             _context.RequestAborted);
 
-        result.Request.Should().BeEquivalentTo(_request);
+        result.RequestDto.Should().BeEquivalentTo(requestDto);
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task parse_when_software_statement_is_invalid_expect_dcr_exception()
     {
-        typeof(RegisterRequest).GetProperty(nameof(RegisterRequest.SoftwareStatement))!
-            .SetValue(_request, "invalid_software_statement");
+        typeof(RegisterRequestDTO).GetProperty(nameof(RegisterRequestDTO.SoftwareStatement))!
+            .SetValue(requestDto, "invalid_software_statement");
         
-        SetJsonBody(_request);
+        SetJsonBody(requestDto);
         
         var task = async () => await _subject.ParseAsync(
             _context.Request.Body,
@@ -135,9 +135,9 @@ public class DefaultDynamicClientManagementRequestParserTests
     [Trait("Category", Category)]
     public async Task parse_when_request_contains_software_statement_should_return_software_statement()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
-            SoftwareStatement = CreateSoftwareStatement(_request)
+            SoftwareStatement = CreateSoftwareStatement(requestDto)
         };
 
         SetJsonBody(request);
@@ -154,7 +154,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     [Trait("Category", Category)]
     public async Task parse_when_valid_should_return_valid_request()
     {
-        SetJsonBody(_request);
+        SetJsonBody(requestDto);
         
         var result = await _subject.ParseAsync(
             _context.Request.Body,
@@ -162,14 +162,14 @@ public class DefaultDynamicClientManagementRequestParserTests
             _context.RequestAborted);
         
         result.Should().NotBeNull();
-        result.Request.Should().BeEquivalentTo(_request);   
+        result.RequestDto.Should().BeEquivalentTo(requestDto);   
     }
     
     [Fact]
     [Trait("Category", Category)]
     public async Task parse_when_request_contains_software_statement_should_return_valid_request()
     {
-        var topLevelRequest = new RegisterRequest()
+        var topLevelRequest = new RegisterRequestDTO()
         {
             RedirectUris = ["_"],
             TokenEndpointAuthMethod = "_",
@@ -185,7 +185,7 @@ public class DefaultDynamicClientManagementRequestParserTests
             JsonWebKeySetUri = "_",
             SoftwareId = "_",
             SoftwareVersion = "_",
-            SoftwareStatement = CreateSoftwareStatement(_request),
+            SoftwareStatement = CreateSoftwareStatement(requestDto),
             ApplicationType = "_",
             SectorIdentifierUri = "_",
             SubjectType = "_",
@@ -211,18 +211,18 @@ public class DefaultDynamicClientManagementRequestParserTests
             _context.RequestAborted);
         
         result.Should().NotBeNull();
-        result.Request.Should().BeEquivalentTo(_request);
+        result.RequestDto.Should().BeEquivalentTo(requestDto);
     }
 
     [Fact]
     [Trait("Category", Category)]
     public async Task parse_when_request_and_software_statement_contain_same_metadata_should_use_software_statement_value()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://top-level-redirect.test"],
             ClientName = "top-level-client-name",
-            SoftwareStatement = CreateSoftwareStatement(new RegisterRequest
+            SoftwareStatement = CreateSoftwareStatement(new RegisterRequestDTO
             {
                 RedirectUris = ["https://software-statement-redirect.test"],
                 ClientName = "software-statement-client-name"
@@ -236,13 +236,13 @@ public class DefaultDynamicClientManagementRequestParserTests
             _context.Request.ContentType,
             _context.RequestAborted);
 
-        result.Request.RedirectUris.Should().BeEquivalentTo(["https://software-statement-redirect.test"]);
-        result.Request.ClientName.Should().Be("software-statement-client-name");
+        result.RequestDto.RedirectUris.Should().BeEquivalentTo(["https://software-statement-redirect.test"]);
+        result.RequestDto.ClientName.Should().Be("software-statement-client-name");
     }
 
     private void Init()
     {
-        _request = new RegisterRequest()
+        requestDto = new RegisterRequestDTO()
         {
             RedirectUris = ["https://redirect_uri.test", "https://redirect_uri2.test"],
             TokenEndpointAuthMethod = "token_endpoint_auth_method",
@@ -284,9 +284,9 @@ public class DefaultDynamicClientManagementRequestParserTests
         _subject = new DefaultDynamicClientManagementRequestParser(Options.Create(_options), new NullLogger<IDynamicClientManagementRequestParser>());
     }
     
-    private string CreateSoftwareStatement(RegisterRequest request)
+    private string CreateSoftwareStatement(RegisterRequestDTO requestDto)
     {
-        var requestJson = JsonSerializer.SerializeToElement(request);
+        var requestJson = JsonSerializer.SerializeToElement(requestDto);
         
         var securityTokenDescriptor = new SecurityTokenDescriptor
         {
@@ -299,9 +299,9 @@ public class DefaultDynamicClientManagementRequestParserTests
         return handler.WriteToken(handler.CreateJwtSecurityToken(securityTokenDescriptor));
     }
     
-    private void SetJsonBody(RegisterRequest request)
+    private void SetJsonBody(RegisterRequestDTO requestDto)
     {
-        var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        var json = JsonSerializer.Serialize(requestDto, new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });

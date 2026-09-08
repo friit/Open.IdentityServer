@@ -11,10 +11,9 @@ using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Exceptions;
 using Open.IdentityServer.DynamicClientManagement.Models;
-using Open.IdentityServer.DynamicClientManagement.Models.Results;
+using Open.IdentityServer.DynamicClientManagement.Services.Results;
 using Open.IdentityServer.DynamicClientManagement.Stores;
 using Open.IdentityServer.Models;
-using Open.IdentityServer.Stores;
 
 namespace Open.IdentityServer.DynamicClientManagement.Services.Default;
 
@@ -41,88 +40,88 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         _logger = logger;
     }
 
-    public async Task<DynamicClientManagementResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<DynamicClientManagementRegisterResult> RegisterAsync(RegisterRequestDTO requestDto, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         // Defaults to client_secret_basic if not specified according to the spec.
-        var tokenEndpointAuthMethod = request.TokenEndpointAuthMethod ?? "client_secret_basic";
+        var tokenEndpointAuthMethod = requestDto.TokenEndpointAuthMethod ?? "client_secret_basic";
 
         // Generate client id and secret.
         var generatedClientId = GenerateClientId();
         var generatedClientSecret = GenerateClientSecret(tokenEndpointAuthMethod);
 
         // Defaults to authorization_code if not specified according to the spec.
-        var grantTypes = request.GrantTypes ?? ["authorization_code"];
+        var grantTypes = requestDto.GrantTypes ?? ["authorization_code"];
 
-        var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var scopes = requestDto.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         
         var client = new Client()
         {
             ClientId = generatedClientId,
-            ClientName = request.ClientName,
-            ClientUri = request.ClientUri,
-            LogoUri = request.LogoUri,
-            RedirectUris = request.RedirectUris,
-            PostLogoutRedirectUris = request.PostLogoutRedirectUris,
+            ClientName = requestDto.ClientName,
+            ClientUri = requestDto.ClientUri,
+            LogoUri = requestDto.LogoUri,
+            RedirectUris = requestDto.RedirectUris,
+            PostLogoutRedirectUris = requestDto.PostLogoutRedirectUris,
             AllowedGrantTypes = grantTypes,
             AllowedScopes = scopes,
-            ClientSecrets = CreateClientSecrets(request, tokenEndpointAuthMethod, generatedClientSecret),
+            ClientSecrets = CreateClientSecrets(requestDto, tokenEndpointAuthMethod, generatedClientSecret),
             RequireClientSecret = tokenEndpointAuthMethod != "none",
             RequirePkce = grantTypes.Contains("authorization_code"),
             AllowOfflineAccess = scopes?.Contains("offline_access") == true || grantTypes.Contains("refresh_token"),
-            FrontChannelLogoutUri = request.FrontChannelLogoutUri,
-            BackChannelLogoutUri = request.BackChannelLogoutUri,
-            UserSsoLifetime = request.UserSsoLifetime ?? request.DefaultMaxAge,
-            InitiateLoginUri = request.InitiateLoginUri,
-            Claims = request.ClientClaims?
+            FrontChannelLogoutUri = requestDto.FrontChannelLogoutUri,
+            BackChannelLogoutUri = requestDto.BackChannelLogoutUri,
+            UserSsoLifetime = requestDto.UserSsoLifetime ?? requestDto.DefaultMaxAge,
+            InitiateLoginUri = requestDto.InitiateLoginUri,
+            Claims = requestDto.ClientClaims?
                 .Select(claim => new ClientClaim(claim.Key, claim.Value.ToString()))
                 .ToList()
         };
 
-        ApplyOpenIdentityServerParameters(request, client);
+        ApplyOpenIdentityServerParameters(requestDto, client);
 
-        if(request.Contacts != null)
+        if(requestDto.Contacts != null)
         {
-            client.Properties[InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(request.Contacts);
+            client.Properties[InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(requestDto.Contacts);
         }
         
-        if(request.PolicyUri != null)
+        if(requestDto.PolicyUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "policy_uri"] = request.PolicyUri;
+            client.Properties[InternalPropertyPrefix + "policy_uri"] = requestDto.PolicyUri;
         }
         
-        if(request.SoftwareId != null)
+        if(requestDto.SoftwareId != null)
         {
-            client.Properties[InternalPropertyPrefix + "software_id"] = request.SoftwareId;
+            client.Properties[InternalPropertyPrefix + "software_id"] = requestDto.SoftwareId;
         }
         
-        if(request.SoftwareVersion != null)
+        if(requestDto.SoftwareVersion != null)
         {
-            client.Properties[InternalPropertyPrefix + "software_version"] = request.SoftwareVersion;
+            client.Properties[InternalPropertyPrefix + "software_version"] = requestDto.SoftwareVersion;
         }
         
-        if(request.TermsOfServiceUri != null)
+        if(requestDto.TermsOfServiceUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "tos_uri"] = request.TermsOfServiceUri;
+            client.Properties[InternalPropertyPrefix + "tos_uri"] = requestDto.TermsOfServiceUri;
         }
         
-        if (request.JsonWebKeySetUri != null)
+        if (requestDto.JsonWebKeySetUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "jwks_uri"] = request.JsonWebKeySetUri;
-        }
-
-        if (request.JsonWebKeySet.HasValue)
-        {
-            client.Properties[InternalPropertyPrefix + "jwks"] = request.JsonWebKeySet.Value.GetRawText();
+            client.Properties[InternalPropertyPrefix + "jwks_uri"] = requestDto.JsonWebKeySetUri;
         }
 
-        foreach (var metadata in request.AdditionalMetadata ?? [])
+        if (requestDto.JsonWebKeySet.HasValue)
+        {
+            client.Properties[InternalPropertyPrefix + "jwks"] = requestDto.JsonWebKeySet.Value.GetRawText();
+        }
+
+        foreach (var metadata in requestDto.AdditionalMetadata ?? [])
         {
             client.Properties[InternalPropertyPrefix + metadata.Key] = metadata.Value.GetRawText();
         }
 
-        var token = GenerateToken(client, request);
+        var token = GenerateToken(client, requestDto);
         
         //TODO: review this, should we store the token in the client properties? or should we store it in a separate store?
         // Should this also store actual data?
@@ -136,7 +135,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             generatedClientId,
             tokenEndpointAuthMethod);
 
-        return new DynamicClientManagementResult
+        return new DynamicClientManagementRegisterResult
         {
             Client = client,
             ClientSecret = generatedClientSecret,
@@ -145,7 +144,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             ClientIdIssuedAt = DateTimeOffset.UtcNow,
             //Todo: Implement proper expiration for client secrets if needed. For now, we set it to UnixEpoch if a secret is generated, otherwise null.
             ClientSecretExpiresAt = generatedClientSecret is null ? null : DateTimeOffset.UnixEpoch,
-            OriginalRequest = request,
+            OriginalRequestDto = requestDto,
         };
     }
 
@@ -165,7 +164,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         return uriBuilder.ToString();
     }
 
-    protected virtual (string raw, string hash) GenerateToken(Client client, RegisterRequest request)
+    protected virtual (string raw, string hash) GenerateToken(Client client, RegisterRequestDTO requestDto)
     {
         var tokenBytes = RandomNumberGenerator.GetBytes(32);
         var token = WebEncoders.Base64UrlEncode(tokenBytes);
@@ -174,159 +173,159 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         return (token, tokenHash);
     }
 
-    private static void ApplyOpenIdentityServerParameters(RegisterRequest request, Client client)
+    private static void ApplyOpenIdentityServerParameters(RegisterRequestDTO requestDto, Client client)
     {
-        if (request.Enabled.HasValue)
+        if (requestDto.Enabled.HasValue)
         {
-            client.Enabled = request.Enabled.Value;
+            client.Enabled = requestDto.Enabled.Value;
         }
 
-        if (request.RequireConsent.HasValue)
+        if (requestDto.RequireConsent.HasValue)
         {
-            client.RequireConsent = request.RequireConsent.Value;
+            client.RequireConsent = requestDto.RequireConsent.Value;
         }
 
-        if (request.AllowRememberConsent.HasValue)
+        if (requestDto.AllowRememberConsent.HasValue)
         {
-            client.AllowRememberConsent = request.AllowRememberConsent.Value;
+            client.AllowRememberConsent = requestDto.AllowRememberConsent.Value;
         }
 
-        if (request.RequirePkce.HasValue)
+        if (requestDto.RequirePkce.HasValue)
         {
-            client.RequirePkce = request.RequirePkce.Value;
+            client.RequirePkce = requestDto.RequirePkce.Value;
         }
 
-        if (request.RequireRequestObject.HasValue)
+        if (requestDto.RequireRequestObject.HasValue)
         {
-            client.RequireRequestObject = request.RequireRequestObject.Value;
+            client.RequireRequestObject = requestDto.RequireRequestObject.Value;
         }
 
-        if (request.AlwaysIncludeUserClaimsInIdToken.HasValue)
+        if (requestDto.AlwaysIncludeUserClaimsInIdToken.HasValue)
         {
-            client.AlwaysIncludeUserClaimsInIdToken = request.AlwaysIncludeUserClaimsInIdToken.Value;
+            client.AlwaysIncludeUserClaimsInIdToken = requestDto.AlwaysIncludeUserClaimsInIdToken.Value;
         }
 
-        if (request.IdentityTokenLifetime.HasValue)
+        if (requestDto.IdentityTokenLifetime.HasValue)
         {
-            client.IdentityTokenLifetime = request.IdentityTokenLifetime.Value;
+            client.IdentityTokenLifetime = requestDto.IdentityTokenLifetime.Value;
         }
 
-        if (request.AccessTokenLifetime.HasValue)
+        if (requestDto.AccessTokenLifetime.HasValue)
         {
-            client.AccessTokenLifetime = request.AccessTokenLifetime.Value;
+            client.AccessTokenLifetime = requestDto.AccessTokenLifetime.Value;
         }
 
-        if (request.AuthorizationCodeLifetime.HasValue)
+        if (requestDto.AuthorizationCodeLifetime.HasValue)
         {
-            client.AuthorizationCodeLifetime = request.AuthorizationCodeLifetime.Value;
+            client.AuthorizationCodeLifetime = requestDto.AuthorizationCodeLifetime.Value;
         }
 
-        if (request.AbsoluteRefreshTokenLifetime.HasValue)
+        if (requestDto.AbsoluteRefreshTokenLifetime.HasValue)
         {
-            client.AbsoluteRefreshTokenLifetime = request.AbsoluteRefreshTokenLifetime.Value;
+            client.AbsoluteRefreshTokenLifetime = requestDto.AbsoluteRefreshTokenLifetime.Value;
         }
 
-        if (request.SlidingRefreshTokenLifetime.HasValue)
+        if (requestDto.SlidingRefreshTokenLifetime.HasValue)
         {
-            client.SlidingRefreshTokenLifetime = request.SlidingRefreshTokenLifetime.Value;
+            client.SlidingRefreshTokenLifetime = requestDto.SlidingRefreshTokenLifetime.Value;
         }
 
-        if (request.ConsentLifetime.HasValue)
+        if (requestDto.ConsentLifetime.HasValue)
         {
-            client.ConsentLifetime = request.ConsentLifetime.Value;
+            client.ConsentLifetime = requestDto.ConsentLifetime.Value;
         }
 
-        if (request.RefreshTokenUsage is not null)
+        if (requestDto.RefreshTokenUsage is not null)
         {
             client.RefreshTokenUsage = ParseEnum<TokenUsage>(
-                request.RefreshTokenUsage,
-                nameof(request.RefreshTokenUsage));
+                requestDto.RefreshTokenUsage,
+                nameof(requestDto.RefreshTokenUsage));
         }
 
-        if (request.UpdateAccessTokenClaimsOnRefresh.HasValue)
+        if (requestDto.UpdateAccessTokenClaimsOnRefresh.HasValue)
         {
-            client.UpdateAccessTokenClaimsOnRefresh = request.UpdateAccessTokenClaimsOnRefresh.Value;
+            client.UpdateAccessTokenClaimsOnRefresh = requestDto.UpdateAccessTokenClaimsOnRefresh.Value;
         }
 
-        if (request.RefreshTokenExpiration is not null)
+        if (requestDto.RefreshTokenExpiration is not null)
         {
             client.RefreshTokenExpiration = ParseEnum<TokenExpiration>(
-                request.RefreshTokenExpiration,
-                nameof(request.RefreshTokenExpiration));
+                requestDto.RefreshTokenExpiration,
+                nameof(requestDto.RefreshTokenExpiration));
         }
 
-        if (request.AccessTokenType is not null)
+        if (requestDto.AccessTokenType is not null)
         {
             client.AccessTokenType = ParseEnum<AccessTokenType>(
-                request.AccessTokenType,
-                nameof(request.AccessTokenType));
+                requestDto.AccessTokenType,
+                nameof(requestDto.AccessTokenType));
         }
 
-        if (request.EnableLocalLogin.HasValue)
+        if (requestDto.EnableLocalLogin.HasValue)
         {
-            client.EnableLocalLogin = request.EnableLocalLogin.Value;
+            client.EnableLocalLogin = requestDto.EnableLocalLogin.Value;
         }
 
-        if (request.IdentityProviderRestrictions is not null)
+        if (requestDto.IdentityProviderRestrictions is not null)
         {
-            client.IdentityProviderRestrictions = request.IdentityProviderRestrictions;
+            client.IdentityProviderRestrictions = requestDto.IdentityProviderRestrictions;
         }
 
-        if (request.IncludeJwtId.HasValue)
+        if (requestDto.IncludeJwtId.HasValue)
         {
-            client.IncludeJwtId = request.IncludeJwtId.Value;
+            client.IncludeJwtId = requestDto.IncludeJwtId.Value;
         }
 
-        if (request.ClientClaims is not null)
+        if (requestDto.ClientClaims is not null)
         {
-            client.Claims = request.ClientClaims
+            client.Claims = requestDto.ClientClaims
                 .Select(claim => new ClientClaim(claim.Key, claim.Value.ToString()))
                 .ToList();
         }
 
-        if (request.ClientClaimsPrefix is not null)
+        if (requestDto.ClientClaimsPrefix is not null)
         {
-            client.ClientClaimsPrefix = request.ClientClaimsPrefix;
+            client.ClientClaimsPrefix = requestDto.ClientClaimsPrefix;
         }
 
-        if (request.PairwiseSubjectSalt is not null)
+        if (requestDto.PairwiseSubjectSalt is not null)
         {
-            client.PairWiseSubjectSalt = request.PairwiseSubjectSalt;
+            client.PairWiseSubjectSalt = requestDto.PairwiseSubjectSalt;
         }
 
-        if (request.UserSsoLifetime.HasValue)
+        if (requestDto.UserSsoLifetime.HasValue)
         {
-            client.UserSsoLifetime = request.UserSsoLifetime.Value;
+            client.UserSsoLifetime = requestDto.UserSsoLifetime.Value;
         }
 
-        if (request.UserCodeType is not null)
+        if (requestDto.UserCodeType is not null)
         {
-            client.UserCodeType = request.UserCodeType;
+            client.UserCodeType = requestDto.UserCodeType;
         }
 
-        if (request.DeviceCodeLifetime.HasValue)
+        if (requestDto.DeviceCodeLifetime.HasValue)
         {
-            client.DeviceCodeLifetime = request.DeviceCodeLifetime.Value;
+            client.DeviceCodeLifetime = requestDto.DeviceCodeLifetime.Value;
         }
 
-        if (request.AllowedCorsOrigins is not null)
+        if (requestDto.AllowedCorsOrigins is not null)
         {
-            client.AllowedCorsOrigins = request.AllowedCorsOrigins;
+            client.AllowedCorsOrigins = requestDto.AllowedCorsOrigins;
         }
 
-        if (request.FrontChannelLogoutSessionRequired.HasValue)
+        if (requestDto.FrontChannelLogoutSessionRequired.HasValue)
         {
-            client.FrontChannelLogoutSessionRequired = request.FrontChannelLogoutSessionRequired.Value;
+            client.FrontChannelLogoutSessionRequired = requestDto.FrontChannelLogoutSessionRequired.Value;
         }
 
-        if (request.BackChannelLogoutSessionRequired.HasValue)
+        if (requestDto.BackChannelLogoutSessionRequired.HasValue)
         {
-            client.BackChannelLogoutSessionRequired = request.BackChannelLogoutSessionRequired.Value;
+            client.BackChannelLogoutSessionRequired = requestDto.BackChannelLogoutSessionRequired.Value;
         }
 
-        if (request.AllowAccessTokensViaBrowser.HasValue)
+        if (requestDto.AllowAccessTokensViaBrowser.HasValue)
         {
-            client.AllowAccessTokensViaBrowser = request.AllowAccessTokensViaBrowser.Value;
+            client.AllowAccessTokensViaBrowser = requestDto.AllowAccessTokensViaBrowser.Value;
         }
 
     }
@@ -368,7 +367,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
     }
 
     protected virtual ICollection<Secret> CreateClientSecrets(
-        RegisterRequest request,
+        RegisterRequestDTO requestDto,
         string tokenEndpointAuthMethod,
         string? generatedClientSecret)
     {
@@ -377,7 +376,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             "none" => [],
             "client_secret_basic" or "client_secret_post" when generatedClientSecret != null =>
                 [new Secret(HashSharedSecret(generatedClientSecret))],
-            "private_key_jwt" => CreateJwkSecrets(request),
+            "private_key_jwt" => CreateJwkSecrets(requestDto),
             _ => throw new InvalidDynamicClientManagementRequestException(
                 Constants.RegisterErrors.InvalidClientMetadata,
                 $"token_endpoint_auth_method '{tokenEndpointAuthMethod}' is not supported.")
@@ -392,16 +391,16 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         return Convert.ToBase64String(hash);
     }
 
-    protected virtual ICollection<Secret> CreateJwkSecrets(RegisterRequest request)
+    protected virtual ICollection<Secret> CreateJwkSecrets(RegisterRequestDTO requestDto)
     {
-        if (request.JsonWebKeySet is null || request.JsonWebKeySet.Value.ValueKind != JsonValueKind.Object)
+        if (requestDto.JsonWebKeySet is null || requestDto.JsonWebKeySet.Value.ValueKind != JsonValueKind.Object)
         {
             throw new InvalidDynamicClientManagementRequestException(
                 Constants.RegisterErrors.InvalidClientMetadata,
                 "jwks must be provided for token_endpoint_auth_method 'private_key_jwt'.");
         }
 
-        if (!request.JsonWebKeySet.Value.TryGetProperty("keys", out var keysElement) ||
+        if (!requestDto.JsonWebKeySet.Value.TryGetProperty("keys", out var keysElement) ||
             keysElement.ValueKind != JsonValueKind.Array ||
             keysElement.GetArrayLength() == 0)
         {

@@ -332,10 +332,10 @@ public class DefaultDynamicClientManagementValidatorTests
     [Trait("Category", Category)]
     [MemberData(nameof(GetUnsupportedMetadataCases))]
     public async Task validate_when_request_contains_unsupported_metadata_should_return_failure(
-        RegisterRequest request,
+        RegisterRequestDTO requestDto,
         string expectedMetadata)
     {
-        var parseResult = CreateParseResult(request);
+        var parseResult = CreateParseResult(requestDto);
 
         var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
 
@@ -373,7 +373,7 @@ public class DefaultDynamicClientManagementValidatorTests
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
             .ReturnsAsync(new SoftwareStatementValidationResult(token));
 
-        var parseResult = CreateParseResult(new RegisterRequest
+        var parseResult = CreateParseResult(new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             GrantTypes = ["authorization_code"],
@@ -393,7 +393,7 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         _options.RequireValidSoftwareStatement = true;
         var token = new JwtSecurityToken();
-        var parseResult = CreateParseResult(new RegisterRequest
+        var parseResult = CreateParseResult(new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             GrantTypes = ["authorization_code"],
@@ -418,7 +418,7 @@ public class DefaultDynamicClientManagementValidatorTests
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
             .ReturnsAsync(new SoftwareStatementValidationResult(token, new SoftwareStatementIssuerRequiredError()));
 
-        var parseResult = CreateParseResult(new RegisterRequest
+        var parseResult = CreateParseResult(new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             GrantTypes = ["authorization_code"],
@@ -432,104 +432,104 @@ public class DefaultDynamicClientManagementValidatorTests
     
     
     private static RegistrationRequestParseResult CreateParseResult(
-        RegisterRequest request,
+        RegisterRequestDTO requestDto,
         JwtSecurityToken? softwareStatement = null)
     {
         return new RegistrationRequestParseResult
         {
-            Request = request,
+            RequestDto = requestDto,
             SoftwareStatement = softwareStatement
         };
     }
     
-    public static TheoryData<RegisterRequest, string> GetUnsupportedMetadataCases => new()
+    public static TheoryData<RegisterRequestDTO, string> GetUnsupportedMetadataCases => new()
     {
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 ResponseTypes = ["id_token"]
             },
             "response_types"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 SubjectType = "pairwise"
             },
             "subject_type"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 RequestUris = ["https://client.test/request.jwt"]
             },
             "request_uris"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 TokenEndpointAuthSigningAlgorithm = "RS256"
             },
             "token_endpoint_auth_signing_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 RequestObjectEncryption = "A128CBC-HS256"
             },
             "request_object_encryption"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 RequestObjectEncryptionAlgorithm = "RSA-OAEP"
             },
             "request_object_encryption_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 RequestObjectSigningAlgorithm = "RS256"
             },
             "request_object_signing_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 UserInfoEncryptedResponseEncryption = "A128CBC-HS256"
             },
             "userinfo_encrypted_response_enc"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 UserInfoEncryptedResponseAlgorithm = "RSA-OAEP"
             },
             "userinfo_encrypted_response_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 UserInfoSignedResponseAlgorithm = "RS256"
             },
             "userinfo_signed_response_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 IdTokenEncryptedResponseEncryption = "A128CBC-HS256"
             },
             "id_token_encrypted_response_enc"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 IdTokenEncryptedResponseAlgorithm = "RSA-OAEP"
             },
             "id_token_encrypted_response_alg"
         },
         {
-            new RegisterRequest
+            new RegisterRequestDTO
             {
                 IdTokenSignedResponseAlgorithm = "RS256"
             },
@@ -537,9 +537,9 @@ public class DefaultDynamicClientManagementValidatorTests
         }
     };
 
-    private static RegisterRequest CreateRegisterRequest(Action<RegisterRequest>? configure = null)
+    private static RegisterRequestDTO CreateRegisterRequest(Action<RegisterRequestDTO>? configure = null)
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "client_secret_basic",

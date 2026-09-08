@@ -31,7 +31,7 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
     [Fact]
     public async Task RegiterEndpoint_WhenPOST_ShouldReturn201AndClientMetadata()
     {
-        var registerRequest = new RegisterRequest
+        var registerRequest = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect_uri.test, https://redirect_uri2.test"],
             TokenEndpointAuthMethod = "token_endpoint_auth_method",
@@ -98,7 +98,7 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
     [Fact]
     public async Task RegisterEndpoint_WhenInvalidRedirectUri_ShouldReturn400()
     {
-        var registerRequest = new RegisterRequest()
+        var registerRequest = new RegisterRequestDTO()
         {
             RedirectUris = ["invalid_redirect_uri"]
         };
@@ -122,7 +122,7 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
     [Fact]
     public async Task RegisterEndpoint_WhenInvalidClientMetadata_ShouldReturn400()
     {
-        var registerRequest = new RegisterRequest();
+        var registerRequest = new RegisterRequestDTO();
         
         var response = await _client.PostAsJsonAsync(
             "connect/register", 
@@ -145,10 +145,10 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         errorResponseJson.GetProperty("error_description").GetString().Should().Be("RedirectUris must be provided.");
     }
 
-    private static void ShouldContainRequestedMetadata(JsonElement responseJson, RegisterRequest registerRequest)
+    private static void ShouldContainRequestedMetadata(JsonElement responseJson, RegisterRequestDTO registerRequestDto)
     {
         var requestJson = JsonSerializer.SerializeToElement(
-            registerRequest,
+            registerRequestDto,
             new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull

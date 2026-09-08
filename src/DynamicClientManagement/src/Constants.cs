@@ -13,6 +13,9 @@ internal static class Constants
         internal const string InvalidSoftwareStatement = "invalid_software_statement";
         internal const string ServerError = "server_error";
         internal const string UnapprovedSoftwareStatement = "unapproved_software_statement";
+        internal const string InvalidClient = "invalid_client";
+        public const string MissingBearerToken = "missing_bearer_token";
+        public const string InvalidBearerToken = "invalid_bearer_token";
     }
 
     internal static class TokenEndpointAuthMethod

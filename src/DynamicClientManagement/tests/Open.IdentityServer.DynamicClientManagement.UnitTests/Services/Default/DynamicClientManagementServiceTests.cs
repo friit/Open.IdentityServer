@@ -61,7 +61,7 @@ public class DynamicClientManagementServiceTests
     [Fact]
     public async Task register_when_auth_method_is_none_should_not_issue_shared_secret()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "none"
@@ -83,7 +83,7 @@ public class DynamicClientManagementServiceTests
     [Fact]
     public async Task register_when_auth_method_is_client_secret_basic_should_issue_shared_secret()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "client_secret_basic"
@@ -107,7 +107,7 @@ public class DynamicClientManagementServiceTests
     [Fact]
     public async Task register_when_auth_method_is_client_secret_post_should_issue_hashed_shared_secret()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "client_secret_post"
@@ -145,7 +145,7 @@ public class DynamicClientManagementServiceTests
         }
         """);
 
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "private_key_jwt",
@@ -172,7 +172,7 @@ public class DynamicClientManagementServiceTests
     [Fact]
     public async Task register_when_private_key_jwt_has_no_jwks_should_throw()
     {
-        var request = new RegisterRequest
+        var request = new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "private_key_jwt"
@@ -277,7 +277,7 @@ public class DynamicClientManagementServiceTests
         result.Client.Properties["software_version"].Should().Be("software_version");
     
         result.RegistrationClientUri.Should().Be($"https://localhost/connect/register/{result.Client.ClientId}");
-        result.OriginalRequest.Should().Be(request);
+        result.OriginalRequestDto.Should().Be(request);
     }
 
     private static string HashSharedSecret(string sharedSecret)
@@ -350,9 +350,9 @@ public class DynamicClientManagementServiceTests
         };
     }
     
-    private static RegisterRequest CreateRegisterRequest() 
+    private static RegisterRequestDTO CreateRegisterRequest() 
     {
-        return new RegisterRequest
+        return new RegisterRequestDTO
         {
             RedirectUris = ["https://redirect.test/callback"],
             TokenEndpointAuthMethod = "token_endpoint_auth_method",
