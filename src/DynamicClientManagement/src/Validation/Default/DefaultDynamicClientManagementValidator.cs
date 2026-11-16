@@ -89,7 +89,8 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         var client = await _clientStore.FindClientByIdAsync(clientId);
         if (client?.Properties is null ||
             !client.Properties.TryGetValue(
-                Constants.DynamicClientManagementProperties.DynamicClientManagementTokenHashProperty,
+                Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                Constants.DynamicClientManagementProperties.TokenHash,
                 out var storedTokenHash))
         {
             return false;

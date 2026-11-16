@@ -7,19 +7,19 @@ namespace Open.IdentityServer.DynamicClientManagement.Generators.Default;
 
 public class DynamicClientManagementResponseGenerator : IDynamicClientManagementResponseGenerator
 {
-    private const string InternalPropertyPrefix = "__dcm_property:";
-
-    private static readonly HashSet<string> IgnoredProperties = new(StringComparer.Ordinal)
+    // These properties are stored in Client.Properties but are mapped explicitly or kept internal
+    // rather than returned as additional metadata.
+    private static readonly HashSet<string> ExplicitlyMappedProperties = new(StringComparer.Ordinal)
     {
-        "dcm_token_hash",
-        "contacts",
-        "tos_uri",
-        "policy_uri",
-        "jwks_uri",
-        "jwks",
-        "token_endpoint_auth_method",
-        "software_id",
-        "software_version"
+        Constants.DynamicClientManagementProperties.TokenHash,
+        Constants.ClientMetadata.Contacts,
+        Constants.ClientMetadata.TermsOfServiceUri,
+        Constants.ClientMetadata.PolicyUri,
+        Constants.ClientMetadata.JsonWebKeySetUri,
+        Constants.ClientMetadata.JsonWebKeySet,
+        Constants.ClientMetadata.TokenEndpointAuthMethod,
+        Constants.ClientMetadata.SoftwareId,
+        Constants.ClientMetadata.SoftwareVersion
     };
 
     public Task<ClientResponseDTO> GenerateGetResponseAsync(Client client, CancellationToken cancellationToken = default)
@@ -32,16 +32,16 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
             ClientId = client.ClientId,
             RedirectUris = client.RedirectUris?.ToArray(),
             GrantTypes = client.AllowedGrantTypes?.ToArray(),
-            TokenEndpointAuthMethod = GetProperty(client, "token_endpoint_auth_method"),
+            TokenEndpointAuthMethod = GetProperty(client, Constants.ClientMetadata.TokenEndpointAuthMethod),
             ClientUri = client.ClientUri,
             LogoUri = client.LogoUri,
             Contacts = GetContacts(client),
-            TermsOfServiceUri = GetProperty(client, "tos_uri"),
-            PolicyUri = GetProperty(client, "policy_uri"),
-            JsonWebKeySetUri = GetProperty(client, "jwks_uri"),
-            JsonWebKeySet = GetJsonProperty(client, "jwks"),
-            SoftwareId = GetProperty(client, "software_id"),
-            SoftwareVersion = GetProperty(client, "software_version"),
+            TermsOfServiceUri = GetProperty(client, Constants.ClientMetadata.TermsOfServiceUri),
+            PolicyUri = GetProperty(client, Constants.ClientMetadata.PolicyUri),
+            JsonWebKeySetUri = GetProperty(client, Constants.ClientMetadata.JsonWebKeySetUri),
+            JsonWebKeySet = GetJsonProperty(client, Constants.ClientMetadata.JsonWebKeySet),
+            SoftwareId = GetProperty(client, Constants.ClientMetadata.SoftwareId),
+            SoftwareVersion = GetProperty(client, Constants.ClientMetadata.SoftwareVersion),
             
         };
 
@@ -84,12 +84,12 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
             ClientUri = registrationClientResult.Client.ClientUri,
             LogoUri = registrationClientResult.Client.LogoUri,
             Contacts = GetContacts(registrationClientResult.Client),
-            TermsOfServiceUri = GetProperty(registrationClientResult.Client, "tos_uri"),
-            PolicyUri = GetProperty(registrationClientResult.Client, "policy_uri"),
-            JsonWebKeySetUri = GetProperty(registrationClientResult.Client, "jwks_uri"),
-            JsonWebKeySet = GetJsonProperty(registrationClientResult.Client, "jwks"),
-            SoftwareId = GetProperty(registrationClientResult.Client, "software_id"),
-            SoftwareVersion = GetProperty(registrationClientResult.Client, "software_version"),
+            TermsOfServiceUri = GetProperty(registrationClientResult.Client, Constants.ClientMetadata.TermsOfServiceUri),
+            PolicyUri = GetProperty(registrationClientResult.Client, Constants.ClientMetadata.PolicyUri),
+            JsonWebKeySetUri = GetProperty(registrationClientResult.Client, Constants.ClientMetadata.JsonWebKeySetUri),
+            JsonWebKeySet = GetJsonProperty(registrationClientResult.Client, Constants.ClientMetadata.JsonWebKeySet),
+            SoftwareId = GetProperty(registrationClientResult.Client, Constants.ClientMetadata.SoftwareId),
+            SoftwareVersion = GetProperty(registrationClientResult.Client, Constants.ClientMetadata.SoftwareVersion),
             
         };
 
@@ -116,9 +116,13 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
     private static IEnumerable<(string Name, string Value)> ExtractAdditionalData(Client client)
     {
         var additionalData = client.Properties
-            .Where(property => property.Key.StartsWith(InternalPropertyPrefix, StringComparison.Ordinal))
-            .Select(property => (Name: property.Key[InternalPropertyPrefix.Length..], Value: property.Value))
-            .Where(property => !IgnoredProperties.Contains(property.Name));
+            .Where(property => property.Key.StartsWith(
+                Constants.DynamicClientManagementProperties.InternalPropertyPrefix,
+                StringComparison.Ordinal))
+            .Select(property => (
+                Name: property.Key[Constants.DynamicClientManagementProperties.InternalPropertyPrefix.Length..],
+                Value: property.Value))
+            .Where(property => !ExplicitlyMappedProperties.Contains(property.Name));
         
         return additionalData;
     }
@@ -140,14 +144,17 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
 
     private static string? GetProperty(Client client, string propertyName)
     {
-        return client.Properties.TryGetValue(InternalPropertyPrefix + propertyName, out var value)
+        return client.Properties.TryGetValue(
+            Constants.DynamicClientManagementProperties.InternalPropertyPrefix + propertyName,
+            out var value)
             ? value
             : null;
     }
 
     private static string[]? GetContacts(Client client)
     {
-        if (!client.Properties.TryGetValue(InternalPropertyPrefix + "contacts", out var value))
+        var value = GetProperty(client, Constants.ClientMetadata.Contacts);
+        if (value is null)
         {
             return null;
         }
@@ -166,7 +173,8 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
 
     private static JsonElement? GetJsonProperty(Client client, string propertyName)
     {
-        if (!client.Properties.TryGetValue(propertyName, out var value))
+        var value = GetProperty(client, propertyName);
+        if (value is null)
         {
             return null;
         }

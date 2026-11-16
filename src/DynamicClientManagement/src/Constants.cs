@@ -25,9 +25,21 @@ internal static class Constants
         internal const string ClientSecretBasic = "client_secret_basic";
     }
 
+    internal static class ClientMetadata
+    {
+        internal const string Contacts = "contacts";
+        internal const string TermsOfServiceUri = "tos_uri";
+        internal const string PolicyUri = "policy_uri";
+        internal const string JsonWebKeySetUri = "jwks_uri";
+        internal const string JsonWebKeySet = "jwks";
+        internal const string TokenEndpointAuthMethod = "token_endpoint_auth_method";
+        internal const string SoftwareId = "software_id";
+        internal const string SoftwareVersion = "software_version";
+    }
+
     internal static class DynamicClientManagementProperties
     {
         internal const string InternalPropertyPrefix = "__dcm_property:";
-        internal const string DynamicClientManagementTokenHashProperty = InternalPropertyPrefix + "dcm_token_hash";
+        internal const string TokenHash = "dcm_token_hash";
     }
 }

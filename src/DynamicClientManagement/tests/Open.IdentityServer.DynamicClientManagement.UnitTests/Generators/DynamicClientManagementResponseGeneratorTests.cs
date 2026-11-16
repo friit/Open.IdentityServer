@@ -162,7 +162,8 @@ public class DynamicClientManagementResponseGeneratorTests
         response.TermsOfServiceUri.Should().Be("https://client.example/tos");
         response.PolicyUri.Should().Be("https://client.example/policy");
         response.JsonWebKeySetUri.Should().Be("https://client.example/jwks");
-        response.JsonWebKeySet.Should().BeNull();
+        response.JsonWebKeySet.Should().NotBeNull();
+        response.JsonWebKeySet!.Value.GetProperty("keys").GetArrayLength().Should().Be(0);
         response.SoftwareId.Should().Be("software-id");
         response.SoftwareVersion.Should().Be("1.0");
 

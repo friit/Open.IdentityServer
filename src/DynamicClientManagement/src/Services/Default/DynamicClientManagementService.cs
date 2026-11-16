@@ -79,42 +79,50 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         };
 
         ApplyOpenIdentityServerParameters(requestDto, client);
-        client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "token_endpoint_auth_method"] =
+        client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                          Constants.ClientMetadata.TokenEndpointAuthMethod] =
             tokenEndpointAuthMethod;
 
         if(requestDto.Contacts != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(requestDto.Contacts);
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.Contacts] = JsonSerializer.Serialize(requestDto.Contacts);
         }
         
         if(requestDto.PolicyUri != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "policy_uri"] = requestDto.PolicyUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.PolicyUri] = requestDto.PolicyUri;
         }
         
         if(requestDto.SoftwareId != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "software_id"] = requestDto.SoftwareId;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.SoftwareId] = requestDto.SoftwareId;
         }
         
         if(requestDto.SoftwareVersion != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "software_version"] = requestDto.SoftwareVersion;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.SoftwareVersion] = requestDto.SoftwareVersion;
         }
         
         if(requestDto.TermsOfServiceUri != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "tos_uri"] = requestDto.TermsOfServiceUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.TermsOfServiceUri] = requestDto.TermsOfServiceUri;
         }
-        
+
         if (requestDto.JsonWebKeySetUri != null)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "jwks_uri"] = requestDto.JsonWebKeySetUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.JsonWebKeySetUri] = requestDto.JsonWebKeySetUri;
         }
 
         if (requestDto.JsonWebKeySet.HasValue)
         {
-            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "jwks"] = requestDto.JsonWebKeySet.Value.GetRawText();
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                              Constants.ClientMetadata.JsonWebKeySet] = requestDto.JsonWebKeySet.Value.GetRawText();
         }
 
         foreach (var metadata in requestDto.AdditionalMetadata ?? [])
@@ -126,7 +134,8 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         
         //TODO: review this, should we store the token in the client properties? or should we store it in a separate store?
         // Should this also store actual data?
-        client.Properties[Constants.DynamicClientManagementProperties.DynamicClientManagementTokenHashProperty] = token.hash;
+        client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix +
+                          Constants.DynamicClientManagementProperties.TokenHash] = token.hash;
         
         await _clientStore.RegisterClientAsync(client, cancellationToken);
         
