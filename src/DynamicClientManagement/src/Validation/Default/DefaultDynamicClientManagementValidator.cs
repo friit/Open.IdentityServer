@@ -139,7 +139,10 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
             return;
         }
 
-        ValidateUri(requestDto.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
+        if (!string.IsNullOrWhiteSpace(requestDto.JsonWebKeySetUri))
+        {
+            ValidateUri(requestDto.JsonWebKeySetUri, "JsonWebKeySetUri", validationResult);
+        }
 
         
     }

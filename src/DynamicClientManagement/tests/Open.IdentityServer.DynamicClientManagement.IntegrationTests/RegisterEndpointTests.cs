@@ -1,22 +1,31 @@
 ﻿// Copyright (c) 2026, Rock Solid Knowledge Ltd
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.IntegrationTests;
 
 public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private readonly WebApplicationFactory<Program> _factory;
     private HttpClient _client;
 
     public RegisterEndpointTests(WebApplicationFactory<Program> factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();   
     }
     
@@ -29,43 +38,23 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
-    public async Task RegiterEndpoint_WhenPOST_ShouldReturn201AndClientMetadata()
+    public async Task RegisterEndpoint_WhenPOST_ShouldReturn201ClientMetadataAndRegistrationAccessToken()
     {
         var registerRequest = new RegisterRequestDTO
         {
-            RedirectUris = ["https://redirect_uri.test, https://redirect_uri2.test"],
-            TokenEndpointAuthMethod = "token_endpoint_auth_method",
-            GrantTypes = ["grant_type, grant_type2"],
-            ResponseTypes = ["response_type, response_type2"],
+            RedirectUris = ["https://redirect-uri.test/callback", "https://redirect-uri2.test/callback"],
+            TokenEndpointAuthMethod = "client_secret_basic",
+            GrantTypes = ["authorization_code"],
             ClientName = "client_name",
-            ClientUri = "client_uri",
-            LogoUri = "logo_uri",
-            Scope = "scope scope2", 
+            ClientUri = "https://client.test",
+            LogoUri = "https://client.test/logo.png",
+            Scope = "scope1 scope2",
             Contacts = ["contact1", "contact2"],
-            TermsOfServiceUri = "terms_of_service_uri",
-            PolicyUri = "policy_uri",
-            JsonWebKeySetUri = "jwks_uri",
-            JsonWebKeySet = JsonDocument.Parse("""{"keys":[{"kty":"RSA","use":"sig","kid":"example-key-id","n":"example-modulus","e":"AQAB"}]}""").RootElement,
+            TermsOfServiceUri = "https://client.test/terms",
+            PolicyUri = "https://client.test/policy",
+            JsonWebKeySetUri = "https://client.test/jwks.json",
             SoftwareId = "software_id",
             SoftwareVersion = "software_version",
-            ApplicationType = "application_type", 
-            SectorIdentifierUri = "sector_identifier_uri",
-            SubjectType = "subject_type",
-            IdTokenSignedResponseAlgorithm = "id_token_signed_response_alg",
-            IdTokenEncryptedResponseAlgorithm = "id_token_encrypted_response_alg",
-            IdTokenEncryptedResponseEncryption = "id_token_encrypted_response_enc",
-            UserInfoSignedResponseAlgorithm = "userinfo_signed_response_alg",
-            UserInfoEncryptedResponseEncryption = "userinfo_encrypted_response_enc",
-            RequestObjectSigningAlgorithm = "request_object_signing_alg",
-            RequestObjectEncryptionAlgorithm = "request_object_encryption_alg",
-            RequestObjectEncryption = "request_object_encryption_enc",
-            TokenEndpointAuthSigningAlgorithm = "token_endpoint_auth_signing_alg",
-            DefaultMaxAge = 100,
-            RequireAuthTime = true,
-            DefaultAcrValues = ["arc", "acr2"],
-            InitiateLoginUri = "initiate_login_uri",
-            RequestUris = ["request_uri", "request_uri2"],
-            PostLogoutRedirectUris = ["post_logout_redirect_uri", "post_logout_redirect_uri2"],
             AdditionalMetadata = new Dictionary<string, JsonElement>
             {
                 ["custom_metadata"] = JsonDocument.Parse("""{"custom_metadata_value":"custom_metadata_value"}""").RootElement
@@ -85,10 +74,14 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         using var responseDocument = JsonDocument.Parse(responseContent);
         var responseJson = responseDocument.RootElement;
         
-        responseJson.GetProperty("client_id").GetString().Should().NotBeNullOrWhiteSpace();
+        var clientId = responseJson.GetProperty("client_id").GetString();
+        clientId.Should().NotBeNullOrWhiteSpace();
         responseJson.GetProperty("client_secret").GetString().Should().NotBeNullOrWhiteSpace();
-        responseJson.GetProperty("registration_access_token").GetString().Should().NotBeNullOrWhiteSpace();
-        responseJson.GetProperty("registration_client_uri").GetString().Should().NotBeNullOrWhiteSpace();
+        var registrationAccessToken = responseJson.GetProperty("registration_access_token").GetString();
+        registrationAccessToken.Should().NotBeNullOrWhiteSpace();
+        var registrationClientUri = responseJson.GetProperty("registration_client_uri").GetString();
+        registrationClientUri.Should().NotBeNullOrWhiteSpace();
+        new Uri(registrationClientUri!).AbsolutePath.Should().Be($"/connect/register/{clientId}");
         responseJson.GetProperty("client_id_issued_at").GetInt64().Should().BePositive();
         responseJson.GetProperty("client_secret_expires_at").GetInt64().Should().BeGreaterThanOrEqualTo(0);
         
@@ -96,11 +89,63 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
+    public async Task RegisterEndpoint_WhenPOSTWithSignedSoftwareStatement_ShouldReturn201ClientMetadataAndRegistrationAccessToken()
+    {
+        const string issuer = "https://issuer.test";
+
+        using var signingRsa = RSA.Create(2048);
+        var validationKey = new RsaSecurityKey(signingRsa.ExportParameters(false));
+        var softwareStatement = CreateSignedSoftwareStatement(signingRsa, issuer);
+
+        using var configuredFactory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+                services.PostConfigure<DynamicClientManagementOptions>(options =>
+                {
+                    options.RequireValidSoftwareStatement = true;
+                    options.SoftwareStatementSignatureValidationOptions.IssuerSigningKeys[issuer] =
+                        [validationKey];
+                })));
+        using var client = configuredFactory.CreateClient();
+
+        var registerRequest = new RegisterRequestDTO
+        {
+            RedirectUris = ["https://signed-client.test/callback"],
+            TokenEndpointAuthMethod = "client_secret_basic",
+            GrantTypes = ["authorization_code"],
+            ClientName = "unsigned-client-name",
+            SoftwareStatement = softwareStatement
+        };
+
+        var response = await client.PostAsJsonAsync(
+            "connect/register",
+            registerRequest,
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var responseDocument = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var responseJson = responseDocument.RootElement;
+
+        var clientId = responseJson.GetProperty("client_id").GetString();
+        clientId.Should().NotBeNullOrWhiteSpace();
+        var registrationAccessToken = responseJson.GetProperty("registration_access_token").GetString();
+        registrationAccessToken.Should().NotBeNullOrWhiteSpace();
+        var registrationClientUri = responseJson.GetProperty("registration_client_uri").GetString();
+        registrationClientUri.Should().NotBeNullOrWhiteSpace();
+        new Uri(registrationClientUri!).AbsolutePath.Should().Be($"/connect/register/{clientId}");
+        responseJson.GetProperty("client_name").GetString().Should().Be("signed-client-name");
+        responseJson.GetProperty("redirect_uris")[0].GetString()
+            .Should().Be("https://signed-client.test/callback");
+    }
+
+    [Fact]
     public async Task RegisterEndpoint_WhenInvalidRedirectUri_ShouldReturn400()
     {
         var registerRequest = new RegisterRequestDTO()
         {
-            RedirectUris = ["invalid_redirect_uri"]
+            RedirectUris = ["invalid_redirect_uri"],
+            GrantTypes = ["authorization_code"]
         };
         var response = await _client.PostAsJsonAsync(
             "connect/register", 
@@ -115,14 +160,17 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         using var responseDocument = JsonDocument.Parse(responseContent);
         var errorResponseJson = responseDocument.RootElement;
         
-        errorResponseJson.GetProperty("error").GetString().Should().Be("invalid_redirect_uri");
-        errorResponseJson.GetProperty("error_description").GetString().Should().Be("RedirectUri 'invalid_redirect_uri' must be an absolute URI.");
+        errorResponseJson.GetProperty("error").GetString().Should()
+            .Be("invalid_client_metadata: RedirectUri 'invalid_redirect_uri' must be an absolute URI.");
     }
     
     [Fact]
     public async Task RegisterEndpoint_WhenInvalidClientMetadata_ShouldReturn400()
     {
-        var registerRequest = new RegisterRequestDTO();
+        var registerRequest = new RegisterRequestDTO
+        {
+            GrantTypes = ["authorization_code"]
+        };
         
         var response = await _client.PostAsJsonAsync(
             "connect/register", 
@@ -130,19 +178,14 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
             TestContext.Current.CancellationToken);
         
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        
-        
-        
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        
         var responseContent = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         responseContent.Should().NotBeNullOrEmpty();
         
         using var responseDocument = JsonDocument.Parse(responseContent);
         var errorResponseJson = responseDocument.RootElement;
         
-        errorResponseJson.GetProperty("error").GetString().Should().Be("invalid_client_metadata");
-        errorResponseJson.GetProperty("error_description").GetString().Should().Be("RedirectUris must be provided.");
+        errorResponseJson.GetProperty("error").GetString().Should()
+            .Be("invalid_client_metadata: redirect_uris must be provided.");
     }
 
     private static void ShouldContainRequestedMetadata(JsonElement responseJson, RegisterRequestDTO registerRequestDto)
@@ -164,5 +207,25 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
                 .Should()
                 .Be(expectedProperty.Value.GetRawText(), $"{expectedProperty.Name} should match the request");
         }
+    }
+
+    private static string CreateSignedSoftwareStatement(RSA signingRsa, string issuer)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateJwtSecurityToken(new SecurityTokenDescriptor
+        {
+            Issuer = issuer,
+            NotBefore = DateTime.UtcNow.AddMinutes(-1),
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("client_name", "signed-client-name")
+            ]),
+            SigningCredentials = new SigningCredentials(
+                new RsaSecurityKey(signingRsa),
+                SecurityAlgorithms.RsaSha256)
+        });
+
+        return tokenHandler.WriteToken(token);
     }
 }
