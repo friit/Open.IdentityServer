@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Open.IdentityServer.DynamicClientManagement.EntityFramework.Stores;
 using Open.IdentityServer.DynamicClientManagement.Stores;
 
@@ -17,7 +16,7 @@ public static class ServiceCollectionExtensions
     /// <returns></returns>
     public static IServiceCollection AddDynamicClientManagementStore(this IServiceCollection services)
     {
-        services.TryAddTransient<IDynamicClientManagementStore, DynamicClientManagementStore>();
+        services.AddTransient<IDynamicClientManagementStore, DynamicClientManagementStore>();
         return services;
     }
 }
