@@ -151,10 +151,17 @@ public class RegisterEndpoint
             {
                 _logger.LogError("Invalid register request {errors}", string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())));
 
+                var validationError = validationResult.Errors[0];
+                var errorDescription = string.Join(
+                    ",\n ",
+                    validationResult.Errors
+                        .Select(error => error.ErrorDescription)
+                        .Where(description => !string.IsNullOrWhiteSpace(description)));
+
                 await WriteErrorResultAsync(
                     context,
-                    string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())),
-                    null
+                    validationError.Error,
+                    string.IsNullOrWhiteSpace(errorDescription) ? null : errorDescription
                 );
 
                 return;
