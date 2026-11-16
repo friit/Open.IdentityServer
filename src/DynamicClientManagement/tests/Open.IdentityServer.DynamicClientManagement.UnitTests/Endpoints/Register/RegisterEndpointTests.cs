@@ -66,7 +66,7 @@ public class RegisterEndpointTests
         _context.Response.Headers.Allow.ToString().Should().Be(HttpMethods.Post);
         Mock.Get(_parser)
             .Verify(
-                x => x.ParseAsync(
+                x => x.ParseRegisterRequestAsync(
                     It.IsAny<Stream>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()),
@@ -74,57 +74,38 @@ public class RegisterEndpointTests
     }
 
     [Fact]
-    public async Task process_when_GET_and_valid_token_expect_client()
+    public async Task process_when_GET_and_invalid_token_expect_400()
     {
-        var token = "valid_token";
         _context.Request.Method = "GET";
+        const string token = "invalid_token";
+        _context.Request.Headers.Authorization = "Bearer invalid_token";
+
         _context.Request.Headers.Authorization = "Bearer " + token;
-        
+        SetupGetRequest("client_id", token);
+
         var client = new Client
         {
-            ClientId = "client_id",
-            ClientName = "client_name"
+            ClientId = "client_id"
         };
-        
+
         Mock.Get(_clientStore)
             .Setup(x => x.FindClientByIdAsync("client_id"))
             .ReturnsAsync(client);
-        
+
         Mock.Get(_validator)
-            .Setup(x => x.ValidateTokenAsync(client, token))
-            .ReturnsAsync(true);
-        
-        await _subject.ProcessGetAsync(_context, "client_id");
-        
-        _context.Response.StatusCode.Should().Be(200);
-        ExpectNoCacheJsonResponse(_context);
-        
-        var response = await ReadResponseJsonAsync(_context);
-
-        var clientResponse = JsonSerializer.Deserialize<Client>(
-            response.GetProperty("client").GetRawText()
-            ,new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        
-        clientResponse.Should().NotBeNull();
-        clientResponse.Should().BeEquivalentTo(client);
-    }
-    
-    [Fact]
-    public async Task process_when_GET_and_invalid_token_expect_401()
-    {
-        _context.Request.Method = "GET";
-        _context.Request.Headers.Authorization = "Bearer invalid_token";
+            .Setup(x => x.ValidateTokenAsync("client_id", token))
+            .ReturnsAsync(false);
 
         await _subject.ProcessGetAsync(_context, "client_id");
         
-        _context.Response.StatusCode.Should().Be(401);
+        _context.Response.StatusCode.Should().Be(400);
         ExpectNoCacheJsonResponse(_context);
         var response = await ReadResponseJsonAsync(_context);
         
         response.GetProperty("error")
             .GetString()
             .Should()
-            .Be("invalid_token");
+            .Be("invalid_bearer_token");
         
         response.GetProperty("error_description")
             .GetString()
@@ -139,17 +120,6 @@ public class RegisterEndpointTests
         await _subject.ProcessGetAsync(_context, "");
         
         _context.Response.StatusCode.Should().Be(400);
-        ExpectNoCacheJsonResponse(_context);
-        var response = await ReadResponseJsonAsync(_context);
-        
-        response.GetProperty("error")
-            .GetString()
-            .Should()
-            .Be("invalid_client_id");
-        response.GetProperty("error_description")
-            .GetString()
-            .Should()
-            .Be("Client id is required for GET requests.");
     }
     
 
@@ -157,6 +127,8 @@ public class RegisterEndpointTests
     public async Task process_when_GET_and_no_token_expect_400()
     {
         _context.Request.Method = "GET";
+        SetupGetRequest("client_id", null);
+
         await _subject.ProcessGetAsync(_context, "client_id");
         
         _context.Response.StatusCode.Should().Be(400);
@@ -173,12 +145,120 @@ public class RegisterEndpointTests
             .Be("Dynamic Client Management Bearer token is required for GET requests.");
     }
     
+    [Fact]
+    public async Task process_when_GET_and_client_not_found_expect_404()
+    {
+        _context.Request.Method = "GET";
+        _context.Request.Headers.Authorization = "Bearer valid_token";
+        
+        Mock.Get(_clientStore)
+            .Setup(x => x.FindClientByIdAsync("client_id"))
+            .ReturnsAsync((Client?)null);
+
+        const string token = "token";
+        _context.Request.Headers.Authorization = "Bearer " + token;
+        SetupGetRequest("client_id", token);
+        
+        await _subject.ProcessGetAsync(_context, "client_id");
+        
+        _context.Response.StatusCode.Should().Be(404);
+        ExpectNoCacheJsonResponse(_context);
+        var response = await ReadResponseJsonAsync(_context);
+        
+        response.GetProperty("error")
+            .GetString()
+            .Should()
+            .Be("invalid_client");
+        
+        response.GetProperty("error_description")
+            .GetString()
+            .Should()
+            .Be("Client not found");
+    }
+
+    [Fact]
+    public async Task process_when_GET_and_validation_throws_exception_should_propagate_exception()
+    {
+        _context.Request.Method = "GET";
+        const string token = "token";
+        SetupGetRequest("client_id", token);
+        _context.Request.Headers.Authorization = "Bearer " + token;
+
+        var client = new Client
+        {
+            ClientId = "client_id"
+        };
+
+        Mock.Get(_clientStore)
+            .Setup(x => x.FindClientByIdAsync("client_id"))
+            .ReturnsAsync(client);
+
+        Mock.Get(_validator)
+            .Setup(x => x.ValidateTokenAsync("client_id", token))
+            .ThrowsAsync(new Exception());
+
+        var act = async () => await _subject.ProcessGetAsync(_context, "client_id");
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    [Fact]
+    public async Task process_when_GET_and_valid_token_expect_client()
+    {
+        var token = "valid_token";
+        
+        _context.Request.Method = "GET";
+        _context.Request.Headers.Authorization = "Bearer " + token;
+        SetupGetRequest("client_id", token);
+        
+        var client = new Client
+        {
+            ClientId = "client_id",
+            ClientName = "client_name"
+        };
+        
+        Mock.Get(_clientStore)
+            .Setup(x => x.FindClientByIdAsync("client_id"))
+            .ReturnsAsync(client);
+        
+        Mock.Get(_validator)
+            .Setup(x => x.ValidateTokenAsync("client_id", token))
+            .ReturnsAsync(true);
+
+        var clientResponse = new ClientResponseDTO
+        {
+            ClientId = "client_id",
+            ClientName = "client_name",
+            RegistrationAccessToken = "registration_token",
+            RegistrationClientUri = "https://server.example/connect/register/client_id"
+        };
+
+        Mock.Get(_responseGenerator)
+            .Setup(x => x.GenerateGetResponseAsync(client, _context.RequestAborted))
+            .ReturnsAsync(clientResponse);
+        
+        await _subject.ProcessGetAsync(_context, "client_id");
+        
+        _context.Response.StatusCode.Should().Be(201);
+        ExpectNoCacheJsonResponse(_context);
+        var response = await ReadResponseJsonAsync(_context);
+        
+        response.GetProperty("client_id")
+            .GetString()
+            .Should()
+            .Be("client_id");
+        
+        response.GetProperty("client_name")
+            .GetString()
+            .Should()
+            .Be("client_name");
+    }
     
     [Fact]
     public async Task process_when_parse_throws_exception_should_return_500()
     {
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body,
                 "application/json",
                 _context.RequestAborted))
@@ -195,7 +275,7 @@ public class RegisterEndpointTests
         var exception = new DynamicClientTestException();
 
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body,
                 "application/json",
                 _context.RequestAborted))
@@ -212,7 +292,7 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
@@ -220,7 +300,7 @@ public class RegisterEndpointTests
         
         var exception = new DynamicClientTestException();
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ThrowsAsync(exception);
         
         await _subject.ProcessRegistrationAsync(_context);
@@ -234,7 +314,7 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
@@ -242,7 +322,7 @@ public class RegisterEndpointTests
         
         var validationResult = new RegistrationRequestValidationResult(registerRequest, new GrantTypesRequiredError());
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(validationResult);
 
         await _subject.ProcessRegistrationAsync(_context);
@@ -260,8 +340,8 @@ public class RegisterEndpointTests
                 Times.Never);
         Mock.Get(_responseGenerator)
             .Verify(
-                x => x.GenerateAsync(
-                    It.IsAny<DynamicClientManagementRegisterResult>(),
+                x => x.GenerateRegisterResponseAsync(
+                    It.IsAny<DynamicClientManagementClientResult>(),
                     It.IsAny<CancellationToken>()),
                 Times.Never);
     }
@@ -272,14 +352,14 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
         
         Mock.Get(_service)
@@ -297,14 +377,14 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
         
         var exception = new DynamicClientTestException();
@@ -323,17 +403,17 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
-        var result = new DynamicClientManagementRegisterResult
+        var result = new DynamicClientManagementClientResult
         {
             Client = new Client(),
             ClientSecret = "secret",
@@ -346,7 +426,7 @@ public class RegisterEndpointTests
             .ReturnsAsync(result);
 
         Mock.Get(_responseGenerator)
-            .Setup(x => x.GenerateAsync(result, _context.RequestAborted))
+            .Setup(x => x.GenerateRegisterResponseAsync(result, _context.RequestAborted))
             .ThrowsAsync(new Exception());
         
         await _subject.ProcessRegistrationAsync(_context);
@@ -360,17 +440,17 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
-        var result = new DynamicClientManagementRegisterResult
+        var result = new DynamicClientManagementClientResult
         {
             Client = new Client(),
             ClientSecret = "secret",
@@ -384,7 +464,7 @@ public class RegisterEndpointTests
 
         var exception = new DynamicClientTestException();
         Mock.Get(_responseGenerator)
-            .Setup(x => x.GenerateAsync(result, _context.RequestAborted))
+            .Setup(x => x.GenerateRegisterResponseAsync(result, _context.RequestAborted))
             .ThrowsAsync(exception);
         
         await _subject.ProcessRegistrationAsync(_context);
@@ -398,17 +478,17 @@ public class RegisterEndpointTests
         var registerRequest = new RegisterRequestDTO();
         var parseResult = CreateParseResult(registerRequest);
         Mock.Get(_parser)
-            .Setup(x => x.ParseAsync(
+            .Setup(x => x.ParseRegisterRequestAsync(
                 _context.Request.Body, 
                 "application/json", 
                 _context.RequestAborted)
             ).ReturnsAsync(parseResult);
         
         Mock.Get(_validator)
-            .Setup(x => x.ValidateAsync(parseResult, _context.RequestAborted))
+            .Setup(x => x.ValidateRegisterRequestAsync(parseResult, _context.RequestAborted))
             .ReturnsAsync(new RegistrationRequestValidationResult(registerRequest));
 
-        var result = new DynamicClientManagementRegisterResult()
+        var result = new DynamicClientManagementClientResult()
         {
             Client = new Client(),
             ClientSecret = "secret",
@@ -420,7 +500,7 @@ public class RegisterEndpointTests
             .Setup(x => x.RegisterAsync(registerRequest, _context.RequestAborted))
             .ReturnsAsync(result);
 
-        var registerResponse = new RegisterResponseDTO()
+        var registerResponse = new ClientResponseDTO()
         {
             ClientId = "client_id",
             ClientSecret = "client_secret",
@@ -441,7 +521,7 @@ public class RegisterEndpointTests
         };
         
         Mock.Get(_responseGenerator)
-            .Setup(x => x.GenerateAsync(result, _context.RequestAborted))
+            .Setup(x => x.GenerateRegisterResponseAsync(result, _context.RequestAborted))
             .ReturnsAsync(registerResponse);
 
         await _subject.ProcessRegistrationAsync(_context);
@@ -449,7 +529,7 @@ public class RegisterEndpointTests
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.Created);
         ExpectNoCacheJsonResponse(_context);
         
-        var response = await ReadResponseJsonAsync<RegisterResponseDTO>(_context);
+        var response = await ReadResponseJsonAsync<ClientResponseDTO>(_context);
         response.Should().BeEquivalentTo(
             registerResponse,
             options => options.Excluding(x => x.AdditionalData));
@@ -476,6 +556,17 @@ public class RegisterEndpointTests
         _clientStore = Mock.Of<IClientStore>();
 
         _subject = new RegisterEndpoint(_parser, _validator, _service, _responseGenerator, _clientStore, _fakeLogger);
+    }
+
+    private void SetupGetRequest(string clientId, string? token)
+    {
+        Mock.Get(_parser)
+            .Setup(x => x.ParseGetRequestAsync(_context, clientId, _context.RequestAborted))
+            .ReturnsAsync(new GetRequestParseResult
+            {
+                ClientId = clientId,
+                Token = token!
+            });
     }
 
     private async Task ExpectServerErrorResponse(HttpContext context)

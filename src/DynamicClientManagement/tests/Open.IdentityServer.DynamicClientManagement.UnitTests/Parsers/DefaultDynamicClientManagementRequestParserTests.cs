@@ -43,7 +43,7 @@ public class DefaultDynamicClientManagementRequestParserTests
         
         SetJsonBody(requestDto);
         
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -57,7 +57,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     {
         SetJsonBody("invalid json");
         
-        var task = async () => await _subject.ParseAsync(
+        var task = async () => await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -71,7 +71,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     [Trait("Category", Category)]
     public async Task parse_when_body_is_empty_expect_dcr_exception()
     {
-        var task = async () => await _subject.ParseAsync(
+        var task = async () => await _subject.ParseRegisterRequestAsync(
             new MemoryStream(),
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -87,7 +87,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     {
         _context.Request.ContentType = "text/plain";
         
-        var task = async () => await _subject.ParseAsync(
+        var task = async () => await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -104,7 +104,7 @@ public class DefaultDynamicClientManagementRequestParserTests
         SetJsonBody(requestDto);
         _context.Request.ContentType = "application/json; charset=utf-8";
 
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -121,7 +121,7 @@ public class DefaultDynamicClientManagementRequestParserTests
         
         SetJsonBody(requestDto);
         
-        var task = async () => await _subject.ParseAsync(
+        var task = async () => await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -142,7 +142,7 @@ public class DefaultDynamicClientManagementRequestParserTests
 
         SetJsonBody(request);
 
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -156,7 +156,7 @@ public class DefaultDynamicClientManagementRequestParserTests
     {
         SetJsonBody(requestDto);
         
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -205,7 +205,7 @@ public class DefaultDynamicClientManagementRequestParserTests
         
         SetJsonBody(topLevelRequest);
         
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);
@@ -231,7 +231,7 @@ public class DefaultDynamicClientManagementRequestParserTests
 
         SetJsonBody(request);
 
-        var result = await _subject.ParseAsync(
+        var result = await _subject.ParseRegisterRequestAsync(
             _context.Request.Body,
             _context.Request.ContentType,
             _context.RequestAborted);

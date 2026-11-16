@@ -3,10 +3,12 @@
 
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Services.Results;
+using Open.IdentityServer.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.Generators;
 
 public interface IDynamicClientManagementResponseGenerator
 {
-    Task<RegisterResponseDTO> GenerateAsync(DynamicClientManagementRegisterResult registrationRegisterResult, CancellationToken cancellationToken = default);
+    Task<ClientResponseDTO> GenerateGetResponseAsync(Client client, CancellationToken cancellationToken = default);
+    Task<ClientResponseDTO> GenerateRegisterResponseAsync(DynamicClientManagementClientResult registrationClientResult, CancellationToken cancellationToken = default);
 }

@@ -66,14 +66,15 @@ public class RegisterEndpoint
         
         if(string.IsNullOrWhiteSpace(clientId))
         {
-            _logger.LogWarning("Invalid client id for register endpoint: {clientId}", clientId);
+            _logger.LogWarning("Missing client id for register endpoint");
 
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
         
-        var token = GetBearerToken(context);
-        if (string.IsNullOrWhiteSpace(token))
+        var request = await _registrationRequestParser.ParseGetRequestAsync(context, clientId, context.RequestAborted);
+
+        if (string.IsNullOrWhiteSpace(request.Token))
         {
             _logger.LogError("Missing bearer token for register endpoint");
             await WriteErrorResultAsync(
@@ -83,11 +84,11 @@ public class RegisterEndpoint
             );
             return;
         }
-
-        var client = await _clientStore.FindClientByIdAsync(clientId);
+        
+        var client = await _clientStore.FindClientByIdAsync(request.ClientId);
         if(client == null)
         {
-            _logger.LogWarning("Invalid client id for register endpoint: {clientId}", clientId);
+            _logger.LogWarning("Invalid client id for register endpoint: {clientId}", request.ClientId);
             await WriteErrorResultAsync(
                 context,
                 Constants.RegisterErrors.InvalidClient,
@@ -97,7 +98,7 @@ public class RegisterEndpoint
             return;
         }
 
-        var validationResult =  await _validator.ValidateTokenAsync(client!, token!);
+        var validationResult =  await _validator.ValidateTokenAsync(request.ClientId, request.Token);
         if(!validationResult)
         {
             _logger.LogError("Invalid bearer token for register endpoint");
@@ -109,11 +110,12 @@ public class RegisterEndpoint
             );
             return;
         }
-        
-        await WriteGetResultAsync(context, new GetResponseDTO
-        {
-           Client = client
-        });
+   
+        // Generate response DTO
+        var response = await _responseGenerator.GenerateGetResponseAsync(client, context.RequestAborted);
+
+        // Write response
+        await WriteResultAsync(context, response);
     }
     
     /// <summary>
@@ -136,14 +138,14 @@ public class RegisterEndpoint
         try
         {
             // Parse request
-            var parseResult = await _registrationRequestParser.ParseAsync(
+            var parseResult = await _registrationRequestParser.ParseRegisterRequestAsync(
                 context.Request.Body,
                 context.Request.ContentType,
                 context.RequestAborted
             );
 
             // Validate request
-            var validationResult = await _validator.ValidateAsync(parseResult, context.RequestAborted);
+            var validationResult = await _validator.ValidateRegisterRequestAsync(parseResult, context.RequestAborted);
             if (validationResult.IsError)
             {
                 _logger.LogError("Invalid register request {errors}", string.Join(",\n ", validationResult.Errors.Select(error => error.ToMessage())));
@@ -161,10 +163,10 @@ public class RegisterEndpoint
             var result = await _service.RegisterAsync(parseResult.RequestDto, context.RequestAborted);
 
             // Generate response DTO
-            var response = await _responseGenerator.GenerateAsync(result, context.RequestAborted);
+            var response = await _responseGenerator.GenerateRegisterResponseAsync(result, context.RequestAborted);
 
             // Write response
-            await WriteRegisterResultAsync(context, response);
+            await WriteResultAsync(context, response);
 
         }
         catch (DynamicClientManagementException dynamicClientManagementException)
@@ -203,8 +205,8 @@ public class RegisterEndpoint
     /// Writes a successful registration response to the current HTTP response.
     /// </summary>
     /// <param name="context">The current HTTP context.</param>
-    /// <param name="registerResponseDto">The response payload to return.</param>
-    protected async Task WriteRegisterResultAsync(HttpContext context, RegisterResponseDTO registerResponseDto)
+    /// <param name="clientResponseDto">The response payload to return.</param>
+    protected async Task WriteResultAsync(HttpContext context, ClientResponseDTO clientResponseDto)
     {
         context.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -212,25 +214,9 @@ public class RegisterEndpoint
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
 
-        await context.Response.WriteAsJsonAsync(registerResponseDto);
+        await context.Response.WriteAsJsonAsync(clientResponseDto);
     }
     
-    /// <summary>
-    /// Writes a successful registration response to the current HTTP response.
-    /// </summary>
-    /// <param name="context">The current HTTP context.</param>
-    /// <param name="getResponseDto">The response payload to return.</param>
-    protected async Task WriteGetResultAsync(HttpContext context, GetResponseDTO getResponseDto)
-    {
-        context.Response.StatusCode = (int)HttpStatusCode.OK;
-
-        context.Response.ContentType = "application/json";
-        context.Response.Headers.CacheControl = "no-store";
-        context.Response.Headers.Pragma = "no-cache";
-
-        await context.Response.WriteAsJsonAsync(getResponseDto);
-    }
-
     /// <summary>
     /// Writes an error response to the current HTTP response.
     /// </summary>
@@ -255,28 +241,5 @@ public class RegisterEndpoint
             error,
             error_description = errorDescription
         });
-    }
-    
-    private static string? GetBearerToken(HttpContext context)
-    {
-        var authorization = context.Request.Headers.Authorization.ToString();
-
-        if (string.IsNullOrWhiteSpace(authorization))
-        {
-            return null;
-        }
-
-        const string bearerPrefix = "Bearer ";
-
-        if (!authorization.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var token = authorization[bearerPrefix.Length..].Trim();
-
-        return string.IsNullOrWhiteSpace(token)
-            ? null
-            : token;
     }
 }

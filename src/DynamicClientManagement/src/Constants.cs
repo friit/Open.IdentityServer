@@ -24,4 +24,10 @@ internal static class Constants
         internal const string ClientSecretPost = "client_secret_post";
         internal const string ClientSecretBasic = "client_secret_basic";
     }
+
+    internal static class DynamicClientManagementProperties
+    {
+        internal const string InternalPropertyPrefix = "__dcm_property:";
+        internal const string DynamicClientManagementTokenHashProperty = InternalPropertyPrefix + "dcm_token_hash";
+    }
 }

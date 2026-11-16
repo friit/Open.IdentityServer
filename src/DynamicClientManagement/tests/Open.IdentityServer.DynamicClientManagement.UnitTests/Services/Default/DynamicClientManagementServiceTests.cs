@@ -223,7 +223,7 @@ public class DynamicClientManagementServiceTests
         var createdSecret = generatedSecrets.SingleOrDefault(s => s.Type == SharedSecretType);
         createdSecret.Should().NotBeNull();
         
-        result.Client.Properties["dcm_token_hash"].Should().Be(expectedTokenHash);
+        result.Client.Properties["__dcm_property:dcm_token_hash"].Should().Be(expectedTokenHash);
         
         result.Client.ClientName.Should().Be("client_name");
         result.Client.ClientUri.Should().Be("client_uri");
@@ -270,11 +270,11 @@ public class DynamicClientManagementServiceTests
         result.Client.DeviceCodeLifetime.Should().Be(1);
         result.Client.AllowedCorsOrigins.Should().BeEquivalentTo(new[] { "https://cors.test" });
         
-        result.Client.Properties["contacts"].Should().Be(JsonSerializer.Serialize(new[] { "contact" }));
-        result.Client.Properties["tos_uri"].Should().Be("https://client.test/tos");
-        result.Client.Properties["policy_uri"].Should().Be("policy_uri");
-        result.Client.Properties["software_id"].Should().Be("software_id");
-        result.Client.Properties["software_version"].Should().Be("software_version");
+        result.Client.Properties["__dcm_property:contacts"].Should().Be(JsonSerializer.Serialize(new[] { "contact" }));
+        result.Client.Properties["__dcm_property:tos_uri"].Should().Be("https://client.test/tos");
+        result.Client.Properties["__dcm_property:policy_uri"].Should().Be("policy_uri");
+        result.Client.Properties["__dcm_property:software_id"].Should().Be("software_id");
+        result.Client.Properties["__dcm_property:software_version"].Should().Be("software_version");
     
         result.RegistrationClientUri.Should().Be($"https://localhost/connect/register/{result.Client.ClientId}");
         result.OriginalRequestDto.Should().Be(request);

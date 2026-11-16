@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
+using Open.IdentityServer.DynamicClientManagement.Services.Results;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
-using Open.IdentityServer.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.Validation;
 
@@ -18,10 +18,10 @@ public interface IDynamicClientManagementValidator
     /// <param name="request">The parsed registration request to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The validation result.</returns>
-    Task<RegistrationRequestValidationResult> ValidateAsync(
+    Task<RegistrationRequestValidationResult> ValidateRegisterRequestAsync(
         RegistrationRequestParseResult request, 
         CancellationToken cancellationToken = default
     );
 
-    Task<bool> ValidateTokenAsync(Client client, string token);
+    Task<bool> ValidateTokenAsync(string client_id, string token);
 }

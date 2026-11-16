@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -40,7 +41,42 @@ public class DefaultDynamicClientManagementRequestParser : IDynamicClientManagem
         _logger = logger;
     }
     
-    public async Task<RegistrationRequestParseResult> ParseAsync(Stream body, string? contentType, CancellationToken cancellationToken)
+    public async Task<GetRequestParseResult> ParseGetRequestAsync(HttpContext context, string client_id, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        return new GetRequestParseResult()
+        {
+            ClientId = client_id,
+            Token = GetBearerToken(context)
+        };
+       
+    }
+    
+    private static string? GetBearerToken(HttpContext context)
+    {
+        var authorization = context.Request.Headers.Authorization.ToString();
+
+        if (string.IsNullOrWhiteSpace(authorization))
+        {
+            return null;
+        }
+
+        const string bearerPrefix = "Bearer ";
+
+        if (!authorization.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var token = authorization[bearerPrefix.Length..].Trim();
+
+        return string.IsNullOrWhiteSpace(token)
+            ? null
+            : token;
+    }
+    
+    public async Task<RegistrationRequestParseResult> ParseRegisterRequestAsync(Stream body, string? contentType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         

@@ -9,5 +9,5 @@ namespace Open.IdentityServer.DynamicClientManagement.Services;
 
 public interface IDynamicClientManagementService
 {
-    Task<DynamicClientManagementRegisterResult> RegisterAsync(RegisterRequestDTO requestDto, CancellationToken cancellationToken = default);
+    Task<DynamicClientManagementClientResult> RegisterAsync(RegisterRequestDTO requestDto, CancellationToken cancellationToken = default);
 }

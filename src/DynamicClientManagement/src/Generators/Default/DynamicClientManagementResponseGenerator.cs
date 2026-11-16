@@ -21,64 +21,104 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         "software_version"
     };
 
-    public Task<RegisterResponseDTO> GenerateAsync(DynamicClientManagementRegisterResult registrationRegisterResult, CancellationToken cancellationToken = default)
+    public Task<ClientResponseDTO> GenerateGetResponseAsync(Client client, CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+         cancellationToken.ThrowIfCancellationRequested();
     
-        var response = new RegisterResponseDTO
+        var response = new ClientResponseDTO
         {
-            ClientName = registrationRegisterResult.Client.ClientName,
-            ClientId = registrationRegisterResult.Client.ClientId,
-            ClientSecret = registrationRegisterResult.ClientSecret,
-            ClientIdIssuedAt = registrationRegisterResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
-            ClientSecretExpiresAt = registrationRegisterResult.ClientSecretExpiresAt?.ToUnixTimeSeconds(),
-            RegistrationAccessToken = registrationRegisterResult.RegistrationAccessToken,
-            RegistrationClientUri = registrationRegisterResult.RegistrationClientUri,
-            RedirectUris = registrationRegisterResult.Client.RedirectUris?.ToArray(),
-            GrantTypes = registrationRegisterResult.Client.AllowedGrantTypes?.ToArray(),
-            //TODO: Better way to presist this? techincally the default here is fragile
-            TokenEndpointAuthMethod = registrationRegisterResult.OriginalRequestDto.TokenEndpointAuthMethod,
-            ResponseTypes = registrationRegisterResult.OriginalRequestDto.ResponseTypes?.ToArray(),
-            ClientUri = registrationRegisterResult.Client.ClientUri,
-            LogoUri = registrationRegisterResult.Client.LogoUri,
-            Contacts = GetContacts(registrationRegisterResult.Client),
-            TermsOfServiceUri = GetProperty(registrationRegisterResult.Client, "tos_uri"),
-            PolicyUri = GetProperty(registrationRegisterResult.Client, "policy_uri"),
-            JsonWebKeySetUri = GetProperty(registrationRegisterResult.Client, "jwks_uri"),
-            JsonWebKeySet = GetJsonProperty(registrationRegisterResult.Client, "jwks"),
-            SoftwareId = GetProperty(registrationRegisterResult.Client, "software_id"),
-            SoftwareVersion = GetProperty(registrationRegisterResult.Client, "software_version"),
+            ClientName = client.ClientName,
+            ClientId = client.ClientId,
+            RedirectUris = client.RedirectUris?.ToArray(),
+            GrantTypes = client.AllowedGrantTypes?.ToArray(),
+            ClientUri = client.ClientUri,
+            LogoUri = client.LogoUri,
+            Contacts = GetContacts(client),
+            TermsOfServiceUri = GetProperty(client, "tos_uri"),
+            PolicyUri = GetProperty(client, "policy_uri"),
+            JsonWebKeySetUri = GetProperty(client, "jwks_uri"),
+            JsonWebKeySet = GetJsonProperty(client, "jwks"),
+            SoftwareId = GetProperty(client, "software_id"),
+            SoftwareVersion = GetProperty(client, "software_version"),
             
         };
 
-        if (registrationRegisterResult.Client.AllowedScopes != null && registrationRegisterResult.Client.AllowedScopes.Any())
+        if (client.AllowedScopes != null && client.AllowedScopes.Any())
         {
-            response.Scope = string.Join(" ", registrationRegisterResult.Client.AllowedScopes);
+            response.Scope = string.Join(" ", client.AllowedScopes);
         }
-    
-        if (registrationRegisterResult.OriginalRequestDto.Enabled.HasValue)
-        {
-            response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(registrationRegisterResult.Client.Enabled);
-        }
-        
-        
 
-        var additionalData = registrationRegisterResult.Client.Properties
-            .Where(property => property.Key.StartsWith(InternalPropertyPrefix, StringComparison.Ordinal))
-            .Select(property => new
-            {
-                Name = property.Key[InternalPropertyPrefix.Length..],
-                property.Value
-            })
-            .Where(property => !IgnoredProperties.Contains(property.Name));
+        response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(client.Enabled);
+        
+        var additionalData = ExtractAdditionalData(client);
 
         foreach (var property in additionalData)
         {
             response.AdditionalData[property.Name] = ParseJsonProperty(property.Name, property.Value);
         }
-    
 
         return Task.FromResult(response);
+
+    }
+
+    public Task<ClientResponseDTO> GenerateRegisterResponseAsync(DynamicClientManagementClientResult registrationClientResult, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+    
+        var response = new ClientResponseDTO
+        {
+            ClientName = registrationClientResult.Client.ClientName,
+            ClientId = registrationClientResult.Client.ClientId,
+            ClientSecret = registrationClientResult.ClientSecret,
+            ClientIdIssuedAt = registrationClientResult.ClientIdIssuedAt.ToUnixTimeSeconds(),
+            ClientSecretExpiresAt = registrationClientResult.ClientSecretExpiresAt?.ToUnixTimeSeconds(),
+            RegistrationAccessToken = registrationClientResult.RegistrationAccessToken,
+            RegistrationClientUri = registrationClientResult.RegistrationClientUri,
+            RedirectUris = registrationClientResult.Client.RedirectUris?.ToArray(),
+            GrantTypes = registrationClientResult.Client.AllowedGrantTypes?.ToArray(),
+            //TODO: Better way to presist this? techincally the default here is fragile
+            TokenEndpointAuthMethod = registrationClientResult.OriginalRequestDto.TokenEndpointAuthMethod,
+            ResponseTypes = registrationClientResult.OriginalRequestDto.ResponseTypes?.ToArray(),
+            ClientUri = registrationClientResult.Client.ClientUri,
+            LogoUri = registrationClientResult.Client.LogoUri,
+            Contacts = GetContacts(registrationClientResult.Client),
+            TermsOfServiceUri = GetProperty(registrationClientResult.Client, "tos_uri"),
+            PolicyUri = GetProperty(registrationClientResult.Client, "policy_uri"),
+            JsonWebKeySetUri = GetProperty(registrationClientResult.Client, "jwks_uri"),
+            JsonWebKeySet = GetJsonProperty(registrationClientResult.Client, "jwks"),
+            SoftwareId = GetProperty(registrationClientResult.Client, "software_id"),
+            SoftwareVersion = GetProperty(registrationClientResult.Client, "software_version"),
+            
+        };
+
+        if (registrationClientResult.Client.AllowedScopes != null && registrationClientResult.Client.AllowedScopes.Any())
+        {
+            response.Scope = string.Join(" ", registrationClientResult.Client.AllowedScopes);
+        }
+    
+        if (registrationClientResult.OriginalRequestDto.Enabled.HasValue)
+        {
+            response.AdditionalData["enabled"] = JsonSerializer.SerializeToElement(registrationClientResult.Client.Enabled);
+        }
+        
+        var additionalData = ExtractAdditionalData(registrationClientResult.Client);
+        
+        foreach (var property in additionalData)
+        {
+            response.AdditionalData[property.Name] = ParseJsonProperty(property.Name, property.Value);
+        }
+        
+        return Task.FromResult(response);
+    }
+    
+    private static IEnumerable<(string Name, string Value)> ExtractAdditionalData(Client client)
+    {
+        var additionalData = client.Properties
+            .Where(property => property.Key.StartsWith(InternalPropertyPrefix, StringComparison.Ordinal))
+            .Select(property => (Name: property.Key[InternalPropertyPrefix.Length..], Value: property.Value))
+            .Where(property => !IgnoredProperties.Contains(property.Name));
+        
+        return additionalData;
     }
 
     private static JsonElement ParseJsonProperty(string propertyName, string value)

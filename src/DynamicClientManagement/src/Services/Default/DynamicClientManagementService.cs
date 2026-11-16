@@ -20,9 +20,7 @@ namespace Open.IdentityServer.DynamicClientManagement.Services.Default;
 public class DynamicClientManagementService : IDynamicClientManagementService
 {
     private const string JsonWebKeySecretType = "JWK";
-    private const string InternalPropertyPrefix = "__dcm_property:";
-    private const string DynamicClientManagementTokenHashProperty = InternalPropertyPrefix + "dcm_token_hash";
-
+   
     private readonly DynamicClientManagementOptions _options;
     private readonly IDynamicClientManagementStore _clientStore;
     private readonly ILogger<DynamicClientManagementService> _logger;
@@ -39,8 +37,9 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         _options = options.Value;
         _logger = logger;
     }
+    
 
-    public async Task<DynamicClientManagementRegisterResult> RegisterAsync(RegisterRequestDTO requestDto, CancellationToken cancellationToken = default)
+    public async Task<DynamicClientManagementClientResult> RegisterAsync(RegisterRequestDTO requestDto, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -83,49 +82,49 @@ public class DynamicClientManagementService : IDynamicClientManagementService
 
         if(requestDto.Contacts != null)
         {
-            client.Properties[InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(requestDto.Contacts);
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "contacts"] = JsonSerializer.Serialize(requestDto.Contacts);
         }
         
         if(requestDto.PolicyUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "policy_uri"] = requestDto.PolicyUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "policy_uri"] = requestDto.PolicyUri;
         }
         
         if(requestDto.SoftwareId != null)
         {
-            client.Properties[InternalPropertyPrefix + "software_id"] = requestDto.SoftwareId;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "software_id"] = requestDto.SoftwareId;
         }
         
         if(requestDto.SoftwareVersion != null)
         {
-            client.Properties[InternalPropertyPrefix + "software_version"] = requestDto.SoftwareVersion;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "software_version"] = requestDto.SoftwareVersion;
         }
         
         if(requestDto.TermsOfServiceUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "tos_uri"] = requestDto.TermsOfServiceUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "tos_uri"] = requestDto.TermsOfServiceUri;
         }
         
         if (requestDto.JsonWebKeySetUri != null)
         {
-            client.Properties[InternalPropertyPrefix + "jwks_uri"] = requestDto.JsonWebKeySetUri;
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "jwks_uri"] = requestDto.JsonWebKeySetUri;
         }
 
         if (requestDto.JsonWebKeySet.HasValue)
         {
-            client.Properties[InternalPropertyPrefix + "jwks"] = requestDto.JsonWebKeySet.Value.GetRawText();
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "jwks"] = requestDto.JsonWebKeySet.Value.GetRawText();
         }
 
         foreach (var metadata in requestDto.AdditionalMetadata ?? [])
         {
-            client.Properties[InternalPropertyPrefix + metadata.Key] = metadata.Value.GetRawText();
+            client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + metadata.Key] = metadata.Value.GetRawText();
         }
 
         var token = GenerateToken(client, requestDto);
         
         //TODO: review this, should we store the token in the client properties? or should we store it in a separate store?
         // Should this also store actual data?
-        client.Properties[DynamicClientManagementTokenHashProperty] = token.hash;
+        client.Properties[Constants.DynamicClientManagementProperties.DynamicClientManagementTokenHashProperty] = token.hash;
         
         await _clientStore.RegisterClientAsync(client, cancellationToken);
         
@@ -135,7 +134,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             generatedClientId,
             tokenEndpointAuthMethod);
 
-        return new DynamicClientManagementRegisterResult
+        return new DynamicClientManagementClientResult
         {
             Client = client,
             ClientSecret = generatedClientSecret,
@@ -147,6 +146,7 @@ public class DynamicClientManagementService : IDynamicClientManagementService
             OriginalRequestDto = requestDto,
         };
     }
+    
 
     private string GetRegistrationClientUri(string clientId)
     {

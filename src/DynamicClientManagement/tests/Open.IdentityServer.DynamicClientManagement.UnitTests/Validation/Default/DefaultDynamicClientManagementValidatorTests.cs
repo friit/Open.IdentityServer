@@ -18,6 +18,7 @@ using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
+using Open.IdentityServer.DynamicClientManagement.Stores;
 using System.Text.Json;
 using Xunit;
 
@@ -36,9 +37,11 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         _options = new DynamicClientManagementOptions();
         _softwareStatementValidator = Mock.Of<ISoftwareStatementValidator>();
+        var dynamicClientManagementStore = Mock.Of<IDynamicClientManagementStore>();
         _subject = new DefaultDynamicClientManagementValidator(
             Options.Create(_options),
             _softwareStatementValidator,
+            dynamicClientManagementStore,
             NullLogger<IDynamicClientManagementValidator>.Instance);
     }
 
@@ -48,7 +51,7 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         var registerRequest = CreateRegisterRequest(r => r.RedirectUris = null);
         
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<RedirectUrisRequiredError>(result.Errors);
@@ -60,7 +63,7 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         var registerRequest = CreateRegisterRequest(r => r.RedirectUris = ["not-a-uri"]);
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustBeAbsoluteError>(result.Errors);
@@ -72,7 +75,7 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         var registerRequest = CreateRegisterRequest(r => r.RedirectUris = ["http://redirect.test/callback"]);
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustUseHttpsError>(result.Errors);
@@ -89,7 +92,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.FrontChannelLogoutUri = null;
         });
         
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<FrontChannelLogoutUriRequiredError>(result.Errors);
@@ -104,7 +107,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.FrontChannelLogoutUri = "not-a-uri";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustBeAbsoluteError>(result.Errors);
@@ -119,7 +122,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.FrontChannelLogoutUri = "http://logout.test/frontchannel";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustUseHttpsError>(result.Errors);
@@ -134,7 +137,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.FrontChannelLogoutUri = "https://logout.test/frontchannel#fragment";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustNotContainFragmentError>(result.Errors);
@@ -150,7 +153,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.JsonWebKeySet = JsonDocument.Parse("""{"keys":[{"kty":"RSA"}]}""").RootElement.Clone();
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<JsonWebKeySetDisallowedError>(result.Errors);
@@ -166,7 +169,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.JsonWebKeySet = null;
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         //AssertSingleError<JsonWebKeySetRequiredError>(result.Errors, "invalid_client_metadata: jwks must be provided when token_endpoint_auth_method is 'private_key_jwt'.");
@@ -181,7 +184,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.JsonWebKeySet = JsonDocument.Parse("""{"keys":[{"kty":"RSA"}]}""").RootElement.Clone();
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<JsonWebKeySetDisallowedError>(result.Errors);
@@ -196,7 +199,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.InitiateLoginUri = "http://client.test/login";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustUseHttpsError>(result.Errors);
@@ -211,7 +214,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.SectorIdentifierUri = "not-a-uri";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustBeAbsoluteError>(result.Errors);
@@ -227,7 +230,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.BackChannelLogoutUri = null;
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<BackChannelLogoutUriRequiredError>(result.Errors);
@@ -242,7 +245,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.BackChannelLogoutUri = "http://logout.test/backchannel";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustUseHttpsError>(result.Errors);
@@ -257,7 +260,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.BackChannelLogoutUri = "https://logout.test/backchannel#fragment";
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustNotContainFragmentError>(result.Errors);
@@ -272,7 +275,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.PostLogoutRedirectUris = ["http://client.test/postlogout"];
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UriMustUseHttpsError>(result.Errors);
@@ -287,7 +290,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.DefaultMaxAge = -1;
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<DefaultMaxAgeInvalidError>(result.Errors);
@@ -309,7 +312,7 @@ public class DefaultDynamicClientManagementValidatorTests
             r.DeviceCodeLifetime = 0;
         });
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         result.Errors.Count(error => error is LifetimeInvalidError).Should().Be(8);
@@ -322,7 +325,7 @@ public class DefaultDynamicClientManagementValidatorTests
         _options.RequireValidSoftwareStatement = true;
         var registerRequest = CreateRegisterRequest();
 
-        var result = await _subject.ValidateAsync(CreateParseResult(registerRequest), CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(CreateParseResult(registerRequest), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<SoftwareStatementRequiredError>(result.Errors);
@@ -337,7 +340,7 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         var parseResult = CreateParseResult(requestDto);
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<UnsupportedMetadataFieldError>(result.Errors);
@@ -356,7 +359,7 @@ public class DefaultDynamicClientManagementValidatorTests
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
             .ReturnsAsync(new SoftwareStatementValidationResult(token));
 
-        _ = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        _ = await _subject.ValidateRegisterRequestAsync(parseResult, CancellationToken.None);
 
         Mock.Get(_softwareStatementValidator)
             .Verify(x => x.ValidateAsync(token, CancellationToken.None), Times.Once);
@@ -379,7 +382,7 @@ public class DefaultDynamicClientManagementValidatorTests
             GrantTypes = ["authorization_code"],
         }, token);
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(parseResult, CancellationToken.None);
 
         Mock.Get(_softwareStatementValidator)
             .Verify(
@@ -403,7 +406,7 @@ public class DefaultDynamicClientManagementValidatorTests
             .Setup(x => x.ValidateAsync(token, CancellationToken.None))
             .ReturnsAsync(new SoftwareStatementValidationResult(token, new SoftwareStatementInvalidSignatureError()));
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<SoftwareStatementInvalidSignatureError>(result.Errors);
@@ -424,7 +427,7 @@ public class DefaultDynamicClientManagementValidatorTests
             GrantTypes = ["authorization_code"],
         }, token);
 
-        var result = await _subject.ValidateAsync(parseResult, CancellationToken.None);
+        var result = await _subject.ValidateRegisterRequestAsync(parseResult, CancellationToken.None);
 
         result.IsError.Should().BeTrue();
         AssertSingleError<SoftwareStatementIssuerRequiredError>(result.Errors);

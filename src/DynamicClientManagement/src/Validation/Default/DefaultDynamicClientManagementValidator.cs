@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
+using Open.IdentityServer.DynamicClientManagement.Services.Results;
+using Open.IdentityServer.DynamicClientManagement.Stores;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 using Open.IdentityServer.Models;
@@ -19,6 +21,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
 {
     private readonly IOptions<DynamicClientManagementOptions> _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
+    private readonly IDynamicClientManagementStore _dynamicClientManagementStore;
     private readonly ILogger<IDynamicClientManagementValidator> _logger;
     
     /// <summary>
@@ -30,15 +33,17 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     public DefaultDynamicClientManagementValidator(
         IOptions<DynamicClientManagementOptions> options,
         ISoftwareStatementValidator softwareStatementValidator,
+        IDynamicClientManagementStore dynamicClientManagementStore,
         ILogger<IDynamicClientManagementValidator> logger)
     {
         _options = options;
         _softwareStatementValidator = softwareStatementValidator;
+        _dynamicClientManagementStore = dynamicClientManagementStore;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public async Task<RegistrationRequestValidationResult> ValidateAsync(
+    public async Task<RegistrationRequestValidationResult> ValidateRegisterRequestAsync(
         RegistrationRequestParseResult parseResult,
         CancellationToken cancellationToken = default)
     {
@@ -72,7 +77,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         return validationResult;
     }
 
-    public Task<bool> ValidateTokenAsync(Client client, string token)
+    public Task<bool> ValidateTokenAsync(string client_id, string token)
     {
         throw new NotImplementedException();
     }

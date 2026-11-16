@@ -26,7 +26,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_when_canceled_should_throw()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -40,7 +40,7 @@ public class DynamicClientManagementResponseGeneratorTests
         using var cancellationTokenSource = new CancellationTokenSource();
         await cancellationTokenSource.CancelAsync();
 
-        var act = async () => await _subject.GenerateAsync(
+        var act = async () => await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             cancellationTokenSource.Token);
 
@@ -50,7 +50,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_when_enabled_was_requested_should_include_enabled_in_additional_data()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -65,7 +65,7 @@ public class DynamicClientManagementResponseGeneratorTests
             }
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -75,7 +75,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_return_response()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -102,7 +102,7 @@ public class DynamicClientManagementResponseGeneratorTests
             },
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -127,7 +127,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_map_known_properties_and_exclude_them_from_additional_data()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -151,7 +151,7 @@ public class DynamicClientManagementResponseGeneratorTests
             OriginalRequestDto = new RegisterRequestDTO()
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -180,7 +180,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_ignore_non_dcm_properties()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -196,7 +196,7 @@ public class DynamicClientManagementResponseGeneratorTests
             OriginalRequestDto = new RegisterRequestDTO()
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -209,7 +209,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_exclude_internal_properties()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -224,7 +224,7 @@ public class DynamicClientManagementResponseGeneratorTests
             OriginalRequestDto = new RegisterRequestDTO()
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -236,7 +236,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_should_preserve_additional_metadata_json_types()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -254,7 +254,7 @@ public class DynamicClientManagementResponseGeneratorTests
             OriginalRequestDto = new RegisterRequestDTO()
         };
 
-        var response = await _subject.GenerateAsync(
+        var response = await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 
@@ -272,7 +272,7 @@ public class DynamicClientManagementResponseGeneratorTests
     [Fact]
     public async Task generate_response_when_dcm_additional_metadata_is_not_valid_json_should_throw()
     {
-        var registrationResult = new DynamicClientManagementRegisterResult
+        var registrationResult = new DynamicClientManagementClientResult
         {
             Client = new Client
             {
@@ -286,7 +286,7 @@ public class DynamicClientManagementResponseGeneratorTests
             OriginalRequestDto = new RegisterRequestDTO()
         };
 
-        var act = async () => await _subject.GenerateAsync(
+        var act = async () => await _subject.GenerateRegisterResponseAsync(
             registrationResult,
             TestContext.Current.CancellationToken);
 

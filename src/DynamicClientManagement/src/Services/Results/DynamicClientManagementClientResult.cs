@@ -9,7 +9,7 @@ namespace Open.IdentityServer.DynamicClientManagement.Services.Results;
 /// <summary>
 /// Returned by DynamicClientManagementService.RegisterAsync
 /// </summary>
-public sealed record DynamicClientManagementRegisterResult
+public sealed record DynamicClientManagementClientResult
 {
     public required Client Client { get; init; }
     public required DateTimeOffset ClientIdIssuedAt { get; init; }
@@ -19,3 +19,4 @@ public sealed record DynamicClientManagementRegisterResult
     public string? RegistrationClientUri { get; init; }
     public RegisterRequestDTO OriginalRequestDto { get; init; }
 }
+
