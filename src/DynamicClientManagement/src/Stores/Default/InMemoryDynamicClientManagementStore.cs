@@ -13,6 +13,14 @@ public class InMemoryDynamicClientManagementStore : IDynamicClientManagementStor
     {
         _clients = clients;
     }
+
+    public Task<Client> FindClientByIdAsync(string clientId)
+    {
+        var client = _clients.SingleOrDefault(candidate => candidate.ClientId == clientId);
+
+        return Task.FromResult(client!);
+    }
+
     public Task RegisterClientAsync(Client client, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

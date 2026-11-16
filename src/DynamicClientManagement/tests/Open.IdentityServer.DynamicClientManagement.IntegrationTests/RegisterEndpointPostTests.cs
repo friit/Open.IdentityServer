@@ -148,6 +148,26 @@ public class RegisterEndpointPostTests : IClassFixture<WebApplicationFactory<Pro
         responseJson.GetProperty("client_name").GetString().Should().Be("signed-client-name");
         responseJson.GetProperty("redirect_uris")[0].GetString()
             .Should().Be("https://signed-client.test/callback");
+
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, registrationClientUri);
+        getRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            registrationAccessToken);
+
+        var getResponse = await client.SendAsync(
+            getRequest,
+            TestContext.Current.CancellationToken);
+
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var getResponseDocument = JsonDocument.Parse(
+            await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var getResponseJson = getResponseDocument.RootElement;
+
+        getResponseJson.GetProperty("client_id").GetString().Should().Be(clientId);
+        getResponseJson.GetProperty("client_name").GetString().Should().Be("signed-client-name");
+        getResponseJson.GetProperty("redirect_uris")[0].GetString()
+            .Should().Be("https://signed-client.test/callback");
     }
 
     [Fact]

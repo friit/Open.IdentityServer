@@ -79,6 +79,8 @@ public class DynamicClientManagementService : IDynamicClientManagementService
         };
 
         ApplyOpenIdentityServerParameters(requestDto, client);
+        client.Properties[Constants.DynamicClientManagementProperties.InternalPropertyPrefix + "token_endpoint_auth_method"] =
+            tokenEndpointAuthMethod;
 
         if(requestDto.Contacts != null)
         {

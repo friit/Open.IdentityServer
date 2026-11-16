@@ -27,7 +27,6 @@ using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
 using Open.IdentityServer.Models;
-using Open.IdentityServer.Stores;
 using Xunit;
 
 namespace Open.IdentityServer.DynamicClientManagement.UnitTests.Endpoints.Register;
@@ -46,7 +45,7 @@ public class RegisterEndpointTests
     private IDynamicClientManagementValidator _validator;
     private IDynamicClientManagementService _service;
     private IDynamicClientManagementResponseGenerator _responseGenerator;
-    private IClientStore _clientStore;
+    private IDynamicClientManagementStore _clientStore;
 
     public RegisterEndpointTests()
     {
@@ -239,7 +238,7 @@ public class RegisterEndpointTests
         
         await _subject.ProcessGetAsync(_context, "client_id");
         
-        _context.Response.StatusCode.Should().Be(201);
+        _context.Response.StatusCode.Should().Be(200);
         ExpectNoCacheJsonResponse(_context);
         var response = await ReadResponseJsonAsync(_context);
         
@@ -553,7 +552,7 @@ public class RegisterEndpointTests
         _validator = Mock.Of<IDynamicClientManagementValidator>();
         _service = Mock.Of<IDynamicClientManagementService>();
         _responseGenerator = Mock.Of<IDynamicClientManagementResponseGenerator>();
-        _clientStore = Mock.Of<IClientStore>();
+        _clientStore = Mock.Of<IDynamicClientManagementStore>();
 
         _subject = new RegisterEndpoint(_parser, _validator, _service, _responseGenerator, _clientStore, _fakeLogger);
     }

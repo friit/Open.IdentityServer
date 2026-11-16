@@ -10,6 +10,7 @@ using Open.IdentityServer.DynamicClientManagement.Generators;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Parser;
 using Open.IdentityServer.DynamicClientManagement.Services;
+using Open.IdentityServer.DynamicClientManagement.Stores;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.Stores;
 
@@ -20,7 +21,7 @@ namespace Open.IdentityServer.DynamicClientManagement.Endpoints;
 /// </summary>
 public class RegisterEndpoint
 {
-    private readonly IClientStore _clientStore;
+    private readonly IDynamicClientManagementStore _clientStore;
     private readonly IDynamicClientManagementRequestParser _registrationRequestParser;
     private readonly IDynamicClientManagementValidator _validator;
     private readonly IDynamicClientManagementService _service;
@@ -40,7 +41,7 @@ public class RegisterEndpoint
         IDynamicClientManagementValidator validator,
         IDynamicClientManagementService service,
         IDynamicClientManagementResponseGenerator responseGenerator,
-        IClientStore clientStore,
+        IDynamicClientManagementStore clientStore,
         ILogger<RegisterEndpoint> logger)
     {
         _registrationRequestParser = registrationRequestParser;
@@ -115,7 +116,7 @@ public class RegisterEndpoint
         var response = await _responseGenerator.GenerateGetResponseAsync(client, context.RequestAborted);
 
         // Write response
-        await WriteResultAsync(context, response);
+        await WriteOkResultAsync(context, response);
     }
     
     /// <summary>
@@ -166,7 +167,7 @@ public class RegisterEndpoint
             var response = await _responseGenerator.GenerateRegisterResponseAsync(result, context.RequestAborted);
 
             // Write response
-            await WriteResultAsync(context, response);
+            await WriteCreatedResultAsync(context, response);
 
         }
         catch (DynamicClientManagementException dynamicClientManagementException)
@@ -206,9 +207,23 @@ public class RegisterEndpoint
     /// </summary>
     /// <param name="context">The current HTTP context.</param>
     /// <param name="clientResponseDto">The response payload to return.</param>
-    protected async Task WriteResultAsync(HttpContext context, ClientResponseDTO clientResponseDto)
+    protected Task WriteCreatedResultAsync(HttpContext context, ClientResponseDTO clientResponseDto) =>
+        WriteJsonResultAsync(context, clientResponseDto, HttpStatusCode.Created);
+
+    /// <summary>
+    /// Writes a successful client management response to the current HTTP response.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
+    /// <param name="clientResponseDto">The response payload to return.</param>
+    protected Task WriteOkResultAsync(HttpContext context, ClientResponseDTO clientResponseDto) =>
+        WriteJsonResultAsync(context, clientResponseDto, HttpStatusCode.OK);
+
+    private async Task WriteJsonResultAsync(
+        HttpContext context,
+        ClientResponseDTO clientResponseDto,
+        HttpStatusCode statusCode)
     {
-        context.Response.StatusCode = (int)HttpStatusCode.Created;
+        context.Response.StatusCode = (int)statusCode;
 
         context.Response.ContentType = "application/json";
         context.Response.Headers.CacheControl = "no-store";

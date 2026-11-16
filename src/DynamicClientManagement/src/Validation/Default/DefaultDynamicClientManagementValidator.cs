@@ -1,6 +1,8 @@
 // Copyright (c) 2026, Rock Solid Knowledge Ltd
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
@@ -21,7 +23,7 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
 {
     private readonly IOptions<DynamicClientManagementOptions> _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
-    private readonly IDynamicClientManagementStore _dynamicClientManagementStore;
+    private readonly IDynamicClientManagementStore _clientStore;
     private readonly ILogger<IDynamicClientManagementValidator> _logger;
     
     /// <summary>
@@ -33,12 +35,12 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
     public DefaultDynamicClientManagementValidator(
         IOptions<DynamicClientManagementOptions> options,
         ISoftwareStatementValidator softwareStatementValidator,
-        IDynamicClientManagementStore dynamicClientManagementStore,
+        IDynamicClientManagementStore clientStore,
         ILogger<IDynamicClientManagementValidator> logger)
     {
         _options = options;
         _softwareStatementValidator = softwareStatementValidator;
-        _dynamicClientManagementStore = dynamicClientManagementStore;
+        _clientStore = clientStore;
         _logger = logger;
     }
 
@@ -77,9 +79,45 @@ public class DefaultDynamicClientManagementValidator : IDynamicClientManagementV
         return validationResult;
     }
 
-    public Task<bool> ValidateTokenAsync(string client_id, string token)
+    public async Task<bool> ValidateTokenAsync(string clientId, string token)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        var client = await _clientStore.FindClientByIdAsync(clientId);
+        if (client?.Properties is null ||
+            !client.Properties.TryGetValue(
+                Constants.DynamicClientManagementProperties.DynamicClientManagementTokenHashProperty,
+                out var storedTokenHash))
+        {
+            return false;
+        }
+
+        byte[] tokenBytes;
+        try
+        {
+            tokenBytes = WebEncoders.Base64UrlDecode(token);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        byte[] storedHash;
+        try
+        {
+            storedHash = Convert.FromBase64String(storedTokenHash);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        var tokenHash = SHA256.HashData(tokenBytes);
+
+        return CryptographicOperations.FixedTimeEquals(tokenHash, storedHash);
     }
 
     private void ValidateUnsupportedMetadata(RegisterRequestDTO requestDto, RegistrationRequestValidationResult validationResult)

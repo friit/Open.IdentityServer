@@ -17,6 +17,7 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
         "policy_uri",
         "jwks_uri",
         "jwks",
+        "token_endpoint_auth_method",
         "software_id",
         "software_version"
     };
@@ -31,6 +32,7 @@ public class DynamicClientManagementResponseGenerator : IDynamicClientManagement
             ClientId = client.ClientId,
             RedirectUris = client.RedirectUris?.ToArray(),
             GrantTypes = client.AllowedGrantTypes?.ToArray(),
+            TokenEndpointAuthMethod = GetProperty(client, "token_endpoint_auth_method"),
             ClientUri = client.ClientUri,
             LogoUri = client.LogoUri,
             Contacts = GetContacts(client),

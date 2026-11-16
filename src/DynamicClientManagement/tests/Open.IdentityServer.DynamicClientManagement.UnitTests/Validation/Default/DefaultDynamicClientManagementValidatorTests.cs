@@ -5,21 +5,24 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Open.IdentityServer.DynamicClientManagement.Configuration;
 using Open.IdentityServer.DynamicClientManagement.Models;
 using Open.IdentityServer.DynamicClientManagement.Parser.Models;
+using Open.IdentityServer.DynamicClientManagement.Stores;
 using Open.IdentityServer.DynamicClientManagement.Validation;
 using Open.IdentityServer.DynamicClientManagement.Validation.Default;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models;
 using Open.IdentityServer.DynamicClientManagement.Validation.Models.Errors;
-using Open.IdentityServer.DynamicClientManagement.Stores;
 using System.Text.Json;
+using Open.IdentityServer.Models;
 using Xunit;
 
 namespace Open.IdentityServer.DynamicClientManagement.UnitTests.Validation.Default;
@@ -30,6 +33,7 @@ public class DefaultDynamicClientManagementValidatorTests
 
     private readonly DynamicClientManagementOptions _options;
     private readonly ISoftwareStatementValidator _softwareStatementValidator;
+    private readonly Mock<IDynamicClientManagementStore> _clientStore;
     private readonly DefaultDynamicClientManagementValidator _subject;
     
 
@@ -37,12 +41,85 @@ public class DefaultDynamicClientManagementValidatorTests
     {
         _options = new DynamicClientManagementOptions();
         _softwareStatementValidator = Mock.Of<ISoftwareStatementValidator>();
-        var dynamicClientManagementStore = Mock.Of<IDynamicClientManagementStore>();
+        _clientStore = new Mock<IDynamicClientManagementStore>();
         _subject = new DefaultDynamicClientManagementValidator(
             Options.Create(_options),
             _softwareStatementValidator,
-            dynamicClientManagementStore,
+            _clientStore.Object,
             NullLogger<IDynamicClientManagementValidator>.Instance);
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_token_when_token_matches_stored_hash_should_return_true()
+    {
+        const string clientId = "client_id";
+        var tokenBytes = new byte[] { 1, 2, 3, 4 };
+        var token = WebEncoders.Base64UrlEncode(tokenBytes);
+        var client = new Client { ClientId = clientId };
+        client.Properties["__dcm_property:dcm_token_hash"] =
+            Convert.ToBase64String(SHA256.HashData(tokenBytes));
+
+        _clientStore
+            .Setup(store => store.FindClientByIdAsync(clientId))
+            .ReturnsAsync(client);
+
+        var result = await _subject.ValidateTokenAsync(clientId, token);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_token_when_token_does_not_match_stored_hash_should_return_false()
+    {
+        const string clientId = "client_id";
+        var tokenBytes = new byte[] { 1, 2, 3, 4 };
+        var token = WebEncoders.Base64UrlEncode(tokenBytes);
+        var client = new Client { ClientId = clientId };
+        client.Properties["__dcm_property:dcm_token_hash"] =
+            Convert.ToBase64String(SHA256.HashData(new byte[] { 5, 6, 7, 8 }));
+
+        _clientStore
+            .Setup(store => store.FindClientByIdAsync(clientId))
+            .ReturnsAsync(client);
+
+        var result = await _subject.ValidateTokenAsync(clientId, token);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_token_when_client_does_not_exist_should_return_false()
+    {
+        const string clientId = "client_id";
+
+        _clientStore
+            .Setup(store => store.FindClientByIdAsync(clientId))
+            .ReturnsAsync((Client)null!);
+
+        var result = await _subject.ValidateTokenAsync(clientId, "token");
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Category", Category)]
+    public async Task validate_token_when_token_is_not_valid_base64url_should_return_false()
+    {
+        const string clientId = "client_id";
+        var client = new Client { ClientId = clientId };
+        client.Properties["__dcm_property:dcm_token_hash"] =
+            Convert.ToBase64String(SHA256.HashData(new byte[] { 1, 2, 3, 4 }));
+
+        _clientStore
+            .Setup(store => store.FindClientByIdAsync(clientId))
+            .ReturnsAsync(client);
+
+        var result = await _subject.ValidateTokenAsync(clientId, "not a base64url token");
+
+        result.Should().BeFalse();
     }
 
     [Fact]
