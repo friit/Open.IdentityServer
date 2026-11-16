@@ -12,7 +12,7 @@ namespace Open.IdentityServer.DynamicClientManagement.Configuration.DependencyIn
 
 public static class IEndpointRouteBuilderExtensions
 {
-    public static RouteHandlerBuilder MapDynamicClientManagement(this IEndpointRouteBuilder builder)
+    public static void MapDynamicClientManagement(this IEndpointRouteBuilder builder)
     {
         var options = builder.ServiceProvider.GetRequiredService<IOptions<DynamicClientManagementOptions>>();
 
@@ -21,13 +21,20 @@ public static class IEndpointRouteBuilderExtensions
             throw new ArgumentException("Route cannot be null or whitespace", nameof(options.Value.RegisterPath));
         }
         
-        RouteHandlerBuilder registerBuilder = builder.MapPost(
+        var managementPath = $"{options.Value.RegisterPath.TrimEnd('/')}/{{clientId}}";
+
+        builder.MapGet(
+                managementPath,
+                (RegisterEndpoint endpoint, HttpContext context, string clientId) =>
+                    endpoint.ProcessGetAsync(context, clientId))
+            .WithName("DynamicClientManagementGet")
+            .WithDisplayName("Dynamic Client Management Get");
+        
+        builder.MapPost(
             options.Value.RegisterPath, 
             (RegisterEndpoint endpoint, HttpContext context) => endpoint.ProcessRegistrationAsync(context)
             )
             .WithName("DynamicClientManagement")
-            .WithDisplayName("Dynamic Client Management");
-       
-        return registerBuilder;
+            .WithDisplayName("Dynamic Client Management Register");
     }
 }

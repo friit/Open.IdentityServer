@@ -8,7 +8,6 @@ namespace Open.IdentityServer.DynamicClientManagement.Models;
 
 /// <summary>
 /// Response from the Dynamic Client Management endpoint
-/// Todo: Separate this out into one for the Get and Register?
 /// </summary>
 public record ClientResponseDTO
 {

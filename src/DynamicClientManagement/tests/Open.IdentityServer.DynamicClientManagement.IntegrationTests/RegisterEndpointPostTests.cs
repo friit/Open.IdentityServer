@@ -3,6 +3,7 @@
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -18,25 +19,17 @@ using Open.IdentityServer.DynamicClientManagement.Models;
 
 namespace Open.IdentityServer.DynamicClientManagement.IntegrationTests;
 
-public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class RegisterEndpointPostTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
     private HttpClient _client;
 
-    public RegisterEndpointTests(WebApplicationFactory<Program> factory)
+    public RegisterEndpointPostTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
         _client = factory.CreateClient();   
     }
     
-    [Fact]
-    public async Task RegisterEndpoint_WhenGET_ShouldReturn404()
-    {
-        var response = await _client.GetAsync("/register", TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
     [Fact]
     public async Task RegisterEndpoint_WhenPOST_ShouldReturn201ClientMetadataAndRegistrationAccessToken()
     {
@@ -86,6 +79,24 @@ public class RegisterEndpointTests : IClassFixture<WebApplicationFactory<Program
         responseJson.GetProperty("client_secret_expires_at").GetInt64().Should().BeGreaterThanOrEqualTo(0);
         
         ShouldContainRequestedMetadata(responseJson, registerRequest);
+
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, registrationClientUri);
+        getRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            registrationAccessToken);
+
+        var getResponse = await _client.SendAsync(
+            getRequest,
+            TestContext.Current.CancellationToken);
+
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var getResponseDocument = JsonDocument.Parse(
+            await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var getResponseJson = getResponseDocument.RootElement;
+
+        getResponseJson.GetProperty("client_id").GetString().Should().Be(clientId);
+        ShouldContainRequestedMetadata(getResponseJson, registerRequest);
     }
 
     [Fact]
